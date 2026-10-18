@@ -35,3 +35,4 @@ app.include_router(analytics_router, prefix="/api/v1")
 @app.get("/health", tags=["Health"])
 async def health_check():
     return {"status": "ok", "service": "sellflow-api", "environment": settings.app_env}
+# Force new deploy 10/19/2026 01:12:09
