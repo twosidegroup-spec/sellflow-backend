@@ -1,0 +1,34 @@
+﻿services:
+  db:
+    image: postgres:15-alpine
+    container_name: sellflow_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: 
+      POSTGRES_PASSWORD: 
+      POSTGRES_DB: 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U  -d "]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: sellflow_api_prod
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: false
+      DATABASE_URL: postgresql+psycopg://:@db:5432/
+      SECRET_KEY: 
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

@@ -1,0 +1,16 @@
+﻿services:
+  db:
+    image: postgres:15-alpine
+    container_name: sellflow_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: sellflow_user
+      POSTGRES_PASSWORD: sellflow_password
+      POSTGRES_DB: sellflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
