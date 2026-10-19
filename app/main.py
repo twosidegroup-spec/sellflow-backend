@@ -15,10 +15,10 @@ app = FastAPI(
     version="0.8.0",
 )
 
-# Required for Flutter Web (browser) to call the API. Native mobile apps are unaffected.
+# FOOLPROOF CORS: Allows ALL origins (perfect for local Chrome testing)
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,4 +35,3 @@ app.include_router(analytics_router, prefix="/api/v1")
 @app.get("/health", tags=["Health"])
 async def health_check():
     return {"status": "ok", "service": "sellflow-api", "environment": settings.app_env}
-# Force new deploy 10/19/2026 01:12:09
