@@ -19,21 +19,22 @@ app = FastAPI(
     version="0.8.0",
 )
 
-# Updated CORS: Allow localhost and all origins for web testing
+# Updated CORS: Allow all origins including localhost variants
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080",
         "http://localhost:3000",
-        "http://127.0.0.1:8080",
-        "http://127.0.0.1:3000",
-        "https://sellflow-backend-0nyn.onrender.com",
         "http://localhost:8000",
-        "*",  # Allow all for flexibility
+        "http://localhost:60704",
+        "http://localhost:60000",
+        "http://127.0.0.1:*",
+        "*",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(auth_router, prefix="/api/v1")
