@@ -5,8 +5,10 @@ class UserCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     business_name: str | None = Field(default=None, min_length=1, max_length=255)
-    # Passcode-based auth (4 or 6 digits). Rate limiting on /auth/login protects against brute force.
     password: str = Field(min_length=4, max_length=64)
+    # Optional fields for UI completeness (stored for future payment integration)
+    payment_provider: str | None = None
+    receiving_number: str | None = None
 
 class UserLogin(BaseModel):
     email: EmailStr
