@@ -8,6 +8,10 @@ from app.orders.router import router as orders_router
 from app.payments.router import router as payments_router
 from app.deliveries.router import router as deliveries_router
 from app.analytics.router import router as analytics_router
+from app.businesses.router import router as businesses_router
+from app.devices.router import router as devices_router
+from app.health.router import router as health_router
+from app.api.v1.router import router as v1_router
 
 app = FastAPI(
     title="SELLFLOW API",
@@ -15,10 +19,18 @@ app = FastAPI(
     version="0.8.0",
 )
 
-# FOOLPROOF CORS: Allows ALL origins (perfect for local Chrome testing)
+# Updated CORS: Allow localhost and all origins for web testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:3000",
+        "https://sellflow-backend-0nyn.onrender.com",
+        "http://localhost:8000",
+        "*",  # Allow all for flexibility
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +43,7 @@ app.include_router(orders_router, prefix="/api/v1")
 app.include_router(payments_router, prefix="/api/v1")
 app.include_router(deliveries_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    return {"status": "ok", "service": "sellflow-api", "environment": settings.app_env}
+app.include_router(businesses_router, prefix="/api/v1")
+app.include_router(devices_router, prefix="/api/v1")
+app.include_router(v1_router)
+app.include_router(health_router)

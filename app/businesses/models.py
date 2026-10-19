@@ -3,6 +3,7 @@ from sqlalchemy import String, DateTime, ForeignKey, Enum as SQLEnum, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.engine import Base
 import enum
+from app.devices.models import Device
 
 class MembershipRole(str, enum.Enum):
     OWNER = "owner"
@@ -25,6 +26,7 @@ class Business(Base):
     orders = relationship("Order", back_populates="business", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="business", cascade="all, delete-orphan")
     deliveries = relationship("Delivery", back_populates="business", cascade="all, delete-orphan")
+    devices = relationship("Device", back_populates="business", cascade="all, delete-orphan")
 
 class Membership(Base):
     __tablename__ = "memberships"
