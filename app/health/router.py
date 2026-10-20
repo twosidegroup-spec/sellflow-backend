@@ -1,5 +1,5 @@
 ﻿from fastapi import APIRouter
-from app.db.engine import SessionLocal
+from sqlalchemy import text
 
 router = APIRouter(tags=["Health"])
 
@@ -24,8 +24,9 @@ async def database_health():
     Verifies the database connection is working.
     """
     try:
+        from app.db.engine import SessionLocal
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         return {
             "status": "ok",
