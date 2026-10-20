@@ -10,6 +10,15 @@ from app.core.rate_limit import check_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+@router.get("/test", response_model=dict)
+async def test_connection():
+    """Simple test endpoint to verify backend connectivity"""
+    return {
+        "status": "ok",
+        "message": "Backend connection successful!",
+        "api_version": "0.8.0"
+    }
+
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
