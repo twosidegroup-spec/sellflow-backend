@@ -16,5 +16,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://postgres:sellflow_password@localhost:5432/postgres?sslmode=require"
 
+    cors_origins: str = "https://sellflow-sf.netlify.app,https://localhost:3000,http://localhost:8080"
+
 
 settings = Settings()

@@ -19,10 +19,10 @@ app = FastAPI(
     version="0.8.0",
 )
 
-# Allow all origins to fix CORS issues for all environments
+# CORS configuration from settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

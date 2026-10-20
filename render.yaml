@@ -28,6 +28,8 @@ services:
         value: 8000
       - key: HOST
         value: 0.0.0.0
+      - key: CORS_ORIGINS
+        value: "https://sellflow-sf.netlify.app,https://localhost:3000"
     healthCheckPath: /health
     disk:
       name: sellflow-data
