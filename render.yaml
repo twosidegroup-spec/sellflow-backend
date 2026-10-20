@@ -2,6 +2,7 @@ services:
   - type: web
     name: sellflow-api
     env: python
+    pythonVersion: 3.13
     region: oregon
     plan: starter
     buildCommand: |
@@ -9,6 +10,10 @@ services:
       alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: RENDER_PYTHON_VERSION
+        value: "3.13"
+      - key: PYO3_USE_ABI3_FORWARD_COMPATIBILITY
+        value: "1"
       - key: SECRET_KEY
         sync: false
       - key: DATABASE_URL
