@@ -19,22 +19,13 @@ app = FastAPI(
     version="0.8.0",
 )
 
-# Updated CORS: Allow all origins including localhost variants
+# Allow all origins - fixes any CORS issue
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "http://localhost:60704",
-        "http://localhost:60000",
-        "http://127.0.0.1:*",
-        "*",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 app.include_router(auth_router, prefix="/api/v1")
