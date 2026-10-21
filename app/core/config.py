@@ -8,15 +8,18 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    # TSG Database Settings
+    database_url: str = "postgresql+psycopg://postgres:sellflow_password@tsg-db:5432/sellflow_db"
+
+    # TSG App Settings
     app_env: str = "development"
     app_debug: bool = True
-    host: str = "127.0.0.1"
+    host: str = "0.0.0.0"
     port: int = 8000
-    secret_key: str = "change-me-in-production"
+    secret_key: str = "your_super_secret_key_change_this_in_production"
 
-    database_url: str = "postgresql+psycopg://postgres:sellflow_password@localhost:5432/postgres?sslmode=require"
-
-    cors_origins: str = "https://sellflow-sf.netlify.app,https://localhost:3000,http://localhost:8080"
+    # TSG CORS Settings - Allow localhost and all origins for development
+    cors_origins: str = "http://localhost,http://localhost:80,http://localhost:3000,http://127.0.0.1,*"
 
 
 settings = Settings()

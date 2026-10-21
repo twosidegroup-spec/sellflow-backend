@@ -2,10 +2,19 @@
 from app.main import app
 from app.db.engine import SessionLocal
 from app.db.base import User
+from sqlalchemy import text
 
 client = TestClient(app)
 
+def clear_rate_limits():
+    """Clear rate limit events before each test to avoid 429 errors"""
+    db = SessionLocal()
+    db.execute(text("DELETE FROM rate_limit_events"))
+    db.commit()
+    db.close()
+
 def test_register_user():
+    clear_rate_limits()
     # Clean up first to avoid duplicate email errors
     db = SessionLocal()
     db.query(User).filter(User.email == "register@sellflow.com").delete()
@@ -22,6 +31,7 @@ def test_register_user():
     assert "id" in data
 
 def test_login_user():
+    clear_rate_limits()
     # Ensure user exists
     db = SessionLocal()
     db.query(User).filter(User.email == "login@sellflow.com").delete()
@@ -50,6 +60,7 @@ def test_login_wrong_password():
     assert response.status_code == 401
 
 def test_get_current_user_protected_route():
+    clear_rate_limits()
     # 1. Register and login to get a valid token
     client.post(
         "/api/v1/auth/register",
