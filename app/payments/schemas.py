@@ -1,9 +1,22 @@
-﻿from pydantic import BaseModel, Field, ConfigDict
+﻿from pydantic import BaseModel, Field, ConfigDict, field_validator
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from enum import Enum
-from app.payments.models import PaymentStatus
+
+class PaymentMethod(str, Enum):
+    # Local (Bangladesh)
+    BKASH = "bkash"
+    NAGAD = "nagad"
+    ROCKET = "rocket"
+    UPAY = "upay"
+    # International
+    PAYPAL = "paypal"
+    CASHAPP = "cashapp"
+    STRIPE = "stripe"
+    WISE = "wise"
+    # Manual
+    CASH = "cash"
 
 
 class PaymentCreate(BaseModel):
@@ -11,6 +24,14 @@ class PaymentCreate(BaseModel):
     method: str = Field(min_length=1, max_length=50)
     transaction_id: str | None = Field(default=None, max_length=255)
     notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator('method')
+    @classmethod
+    def validate_method(cls, v: str) -> str:
+        allowed = [m.value for m in PaymentMethod]
+        if v.lower() not in allowed:
+            raise ValueError(f"Invalid payment method. Allowed: {', '.join(allowed)}")
+        return v.lower()
 
 
 class PaymentRead(BaseModel):
@@ -20,7 +41,7 @@ class PaymentRead(BaseModel):
     amount: Decimal
     method: str
     transaction_id: str | None
-    status: PaymentStatus
+    status: str  # Using string instead of Enum for flexibility
     notes: str | None
     paid_at: datetime | None
     created_at: datetime
@@ -35,10 +56,13 @@ class GatewayTransaction(BaseModel):
     paid_at: Optional[datetime] = None
     order_id: Optional[int] = None
     order_ref: Optional[str] = None
+    # International specific fields
+    payer_email: Optional[str] = None
+    buyer_id: Optional[str] = None
 
 
 class ReconciliationRequest(BaseModel):
-    gateway: str = Field(..., description="Payment gateway name")
+    gateway: str = Field(..., description="Payment gateway name (bkash, paypal, stripe, etc.)")
     transactions: List[GatewayTransaction] = Field(..., description="Transactions from gateway")
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

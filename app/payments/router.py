@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from decimal import Decimal
 from datetime import datetime
@@ -8,15 +8,14 @@ from app.db.base import Business, Order
 from app.payments.schemas import (
     PaymentCreate, PaymentRead,
     ReconciliationRequest, ReconciliationResponse,
-    MobilePaymentVerification, MobilePaymentVerificationResponse,
-    ReconciliationReport
+    MobilePaymentVerification, MobilePaymentVerificationResponse
 )
 from app.payments import service
 from app.payments.models import PaymentStatus
 from app.payments.reconciliation import (
     reconcile_transactions,
-    process_unmatched_remote,
-    reconcile_mobile_payment
+    reconcile_mobile_payment,
+    get_supported_gateways
 )
 
 router = APIRouter(prefix="/businesses/{business_id}/orders/{order_id}/payments", tags=["Payments"])
@@ -36,38 +35,17 @@ def record_payment_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-# ==================== RECONCILIATION ENDPOINTS ====================
+# ==================== GLOBAL ENDPOINTS ====================
 
-@router.post("/reconcile", response_model=ReconciliationResponse)
-def run_reconciliation(
-    business_id: int,
-    request: ReconciliationRequest,
-    db: Session = Depends(get_db),
-    current_business: Business = Depends(get_current_business)
-):
+@router.get("/supported-gateways")
+def get_supported_payment_gateways():
     """
-    Reconcile payment gateway transactions against local records.
-    Used for batch reconciliation after importing gateway reports.
+    Get list of all supported payment gateways (local + international).
     """
-    result = reconcile_transactions(
-        db=db,
-        business_id=business_id,
-        gateway=request.gateway.lower(),
-        transactions=[tx.model_dump() for tx in request.transactions],
-        start_date=request.start_date,
-        end_date=request.end_date
-    )
-    
-    return ReconciliationResponse(
-        total_transactions=result.total_transactions,
-        matched=result.matched,
-        unmatched_remote=result.unmatched_remote,
-        unmatched_local=result.unmatched_local,
-        amount_mismatches=result.amount_mismatches,
-        status_mismatches=result.status_mismatches,
-        processed_at=datetime.utcnow()
-    )
+    return get_supported_gateways()
 
+
+# ==================== MOBILE VERIFICATION ENDPOINTS ====================
 
 @router.post("/reconcile-mobile", response_model=MobilePaymentVerificationResponse)
 def reconcile_mobile_payment_endpoint(
@@ -78,8 +56,8 @@ def reconcile_mobile_payment_endpoint(
     current_business: Business = Depends(get_current_business)
 ):
     """
-    Verify a single mobile payment (iOS/Android).
-    Used when a mobile app submits payment confirmation.
+    Verify a single payment from iOS/Android.
+    Works with both local (bKash, Nagad) and international (PayPal, Stripe) payments.
     """
     result = reconcile_mobile_payment(
         db=db,
@@ -98,62 +76,50 @@ def reconcile_mobile_payment_endpoint(
     )
 
 
-@router.post("/process-unmatched")
-def process_unmatched_transactions(
+# ==================== BATCH RECONCILIATION ENDPOINTS ====================
+
+@router.post("/reconcile", response_model=ReconciliationResponse)
+def run_reconciliation(
     business_id: int,
-    gateway: str,
-    auto_verify: bool = True,
+    order_id: int,
+    request: ReconciliationRequest,
     db: Session = Depends(get_db),
     current_business: Business = Depends(get_current_business)
 ):
     """
-    Process transactions found in gateway but missing from local DB.
-    Creates missing payment records automatically.
-    """
-    from app.payments.reconciliation import get_unmatched_transactions
+    Reconcile payment gateway transactions against local records.
+    Supports local (bKash, Nagad, Rocket, Upay) and international (PayPal, Cash App, Stripe, Wise) gateways.
     
-    unmatched = get_unmatched_transactions(db, business_id, gateway)
-    
-    if not unmatched:
-        return {"processed": 0, "created": []}
-    
-    created = process_unmatched_remote(db, business_id, unmatched, auto_verify)
-    
-    return {
-        "processed": len(unmatched),
-        "created": [
-            {"id": p.id, "transaction_id": p.transaction_id, "amount": p.amount}
-            for p in created
+    Example for PayPal:
+    {
+        "gateway": "paypal",
+        "transactions": [
+            {
+                "id": "3C679366HH908993F",
+                "amount": {"value": "99.99", "currency": "USD"},
+                "payer": {"email_address": "buyer@example.com"},
+                "create_time": "2026-10-22T10:30:00Z",
+                "metadata": {"order_id": "123"}
+            }
         ]
     }
-
-
-@router.get("/reconciliation-report")
-def get_reconciliation_report(
-    business_id: int,
-    gateway: str = "bkash",
-    days: int = 30,
-    db: Session = Depends(get_db),
-    current_business: Business = Depends(get_current_business)
-):
     """
-    Generate a reconciliation report showing discrepancies.
-    """
-    from app.payments.reconciliation import generate_reconciliation_report
-    
-    report = generate_reconciliation_report(
+    result = reconcile_transactions(
         db=db,
         business_id=business_id,
-        gateway=gateway.lower(),
-        days=days
+        gateway=request.gateway.lower(),
+        transactions=[tx.model_dump() for tx in request.transactions],
+        start_date=request.start_date,
+        end_date=request.end_date
     )
     
-    return report
+    return ReconciliationResponse(**result, processed_at=datetime.utcnow())
 
 
 @router.get("/reconciliation/status")
 def get_reconciliation_status(
     business_id: int,
+    order_id: int,
     db: Session = Depends(get_db),
     current_business: Business = Depends(get_current_business)
 ):
@@ -162,7 +128,7 @@ def get_reconciliation_status(
     """
     from sqlalchemy import func
     
-    methods = ['bkash', 'nagad', 'rocket', 'upay', 'cash']
+    methods = ['bkash', 'nagad', 'rocket', 'upay', 'paypal', 'cashapp', 'stripe', 'wise', 'cash']
     status = {}
     
     for method in methods:
@@ -191,10 +157,13 @@ def get_reconciliation_status(
     
     return {
         "business_id": business_id,
+        "order_id": order_id,
         "last_updated": datetime.utcnow(),
         "payment_methods": status
     }
 
+
+# ==================== ORDER RECONCILIATION ====================
 
 @router.post("/verify", response_model=dict)
 def reconcile_single_order(
