@@ -23,6 +23,51 @@ from app.db.base import User
 from tests.conftest import register_seller
 
 
+def test_registration_invite_code_gate(client, monkeypatch):
+    """STAGING gate: when REGISTRATION_INVITE_CODE is set, only matching
+    registrations succeed (constant-time comparison; 403 otherwise)."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "registration_invite_code", "pilot-invite-2026")
+    suffix = uuid.uuid4().hex[:8]
+
+    denied = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": f"noinvite-{suffix}@example.com",
+            "full_name": "No Invite",
+            "password": "pass1234",
+            "business_name": "No Invite Shop",
+        },
+    )
+    assert denied.status_code == 403
+    assert "invitation" in denied.json()["detail"].lower()
+
+    wrong = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": f"wronginvite-{suffix}@example.com",
+            "full_name": "Wrong Invite",
+            "password": "pass1234",
+            "business_name": "Wrong Invite Shop",
+            "invite_code": "not-the-code",
+        },
+    )
+    assert wrong.status_code == 403
+
+    accepted = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": f"invited-{suffix}@example.com",
+            "full_name": "Invited Seller",
+            "password": "pass1234",
+            "business_name": "Invited Shop",
+            "invite_code": "pilot-invite-2026",
+        },
+    )
+    assert accepted.status_code == 201, accepted.text
+
+
 def test_duplicate_registration_is_rejected_cleanly(client):
     seller = register_seller(client)
     response = client.post(
