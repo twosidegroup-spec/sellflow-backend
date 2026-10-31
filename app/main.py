@@ -16,6 +16,9 @@ Consolidated after the System A -> System B migration:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.core.config import settings
 
@@ -86,3 +89,29 @@ app.include_router(webhooks_router, prefix="/api/v1")
 # Root-mounted device bridge / payment accounts (Kotlin bridge compatibility).
 app.include_router(device_bridge_router)
 app.include_router(payment_accounts_router)
+
+# --- Static assets: premium web console + shared mobile assets ----------------
+#
+# The web console is dependency-free static assets served by this app
+# (no build step). Files live in `webapp/`; the shared Inter font files and
+# provider logos live in the Flutter app's `assets/` directory.
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+_WEBAPP_DIR = _BACKEND_ROOT / "webapp"
+_ASSETS_DIR = _BACKEND_ROOT / "assets"
+_UPLOADS_DIR = _BACKEND_ROOT / "uploads"
+
+if _WEBAPP_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=_WEBAPP_DIR, html=True), name="webapp")
+
+if _ASSETS_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
+
+if _UPLOADS_DIR.is_dir():
+    app.mount("/uploads", StaticFiles(directory=_UPLOADS_DIR), name="uploads")
+
+
+@app.get("/console", include_in_schema=False)
+async def console_redirect():
+    """Convenience redirect to the web console."""
+    return RedirectResponse(url="/app/")
+

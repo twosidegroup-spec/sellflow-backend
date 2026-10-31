@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- TEMPORARY local review harness (not part of the product UI).
+     Logs in with credentials passed as query params and renders the console
+     in iframes at several widths so a single headless screenshot shows the
+     responsive behaviour. Deleted before commit. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Review harness</title>
+  <style>
+    body { margin: 0; background: #101725; font-family: system-ui, sans-serif; color: #9fb0c9; }
+    .frames { display: flex; gap: 22px; padding: 22px; align-items: flex-start; }
+    .frame { background: #000; border-radius: 14px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+    .frame header { padding: 7px 12px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; background: #0b1628; color: #7e93b4; }
+    iframe { border: 0; display: block; background: #fff; }
+  </style>
+</head>
+<body>
+  <div class="frames" id="frames"></div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const route = params.get("route") || "";
+    const sizesParam = params.get("sizes") || "mobile,tablet,desktop";
+    const SIZES = {
+      mobile: [390, "iPhone 390"],
+      tablet: [834, "Tablet 834"],
+      desktop: [1440, "Desktop 1440"],
+    };
+    async function boot() {
+      const skipAuth = params.get("auth") === "0";
+      if (!skipAuth) {
+        if (params.get("register") === "1") {
+          await fetch("/api/v1/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: params.get("email"),
+              full_name: "Fresh Seller",
+              password: params.get("password"),
+              business_name: "Fresh Store",
+            }),
+          }).catch(() => {});
+        }
+        const response = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: params.get("email"), password: params.get("password") }),
+        });
+        const data = await response.json();
+        if (!data.access_token) {
+          document.body.innerHTML = "<pre style='color:#f88;padding:20px'>login failed: " + JSON.stringify(data) + "</pre>";
+          return;
+        }
+        localStorage.setItem("sf.token", data.access_token);
+      }
+      if (params.get("theme")) localStorage.setItem("sf.theme", params.get("theme"));
+      const host = document.getElementById("frames");
+      host.innerHTML = sizesParam.split(",").map((key) => {
+        const [width, label] = SIZES[key];
+        return `<div class="frame"><header>${label}</header>
+          <iframe width="${width}" height="900" src="/app/#/${route}"></iframe></div>`;
+      }).join("");
+      document.querySelectorAll("iframe").forEach((frame) => {
+        frame.addEventListener("load", () => {
+          try {
+            const doc = frame.contentDocument;
+            const grow = () => {
+              if (params.get("nogrow")) return;
+              const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+              if (height > 200) frame.style.height = height + "px";
+            };
+            grow();
+            setTimeout(grow, 900);
+            setTimeout(grow, 2200);
+            const clickSelector = params.get("click");
+            if (clickSelector) {
+              setTimeout(() => {
+                doc.querySelector(clickSelector)?.click();
+                setTimeout(grow, 600);
+              }, 1400);
+            }
+          } catch (e) { /* ignore */ }
+        });
+      });
+    }
+    boot();
+  </script>
+</body>
+</html>

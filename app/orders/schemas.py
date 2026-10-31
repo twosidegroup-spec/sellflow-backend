@@ -33,10 +33,18 @@ class OrderItemRead(BaseModel):
     profit: Decimal
     model_config = ConfigDict(from_attributes=True)
 
+class CustomerBrief(BaseModel):
+    id: int
+    name: str
+    phone: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class OrderRead(BaseModel):
     id: int
     business_id: int
     customer_id: int | None
+    customer: CustomerBrief | None = None
     status: OrderStatus
     payment_status: str = "pending"
     payment_method: str | None = None
