@@ -64,6 +64,7 @@ def test_api_responses_are_no_store_but_static_files_are_not(client):
     public = client.get("/api/v1/info")
     assert public.status_code == 200
     assert public.headers.get("cache-control") == "no-store"
+    assert public.headers.get("x-content-type-options") == "nosniff"
 
     seller = register_seller(client)
     private = client.get("/api/v1/auth/me", headers=seller["auth"])

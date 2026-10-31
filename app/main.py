@@ -31,17 +31,22 @@ app = FastAPI(
 
 @app.middleware("http")
 async def _api_no_store(request: Request, call_next):
-    """API responses must never sit in a browser or intermediary HTTP cache.
+    """Cache and sniffing policy for machine-served paths.
 
-    Seller data is per-business and the browser HTTP cache keys on URL, not on
-    the Authorization header. Without an explicit directive a heuristically
-    cacheable response could be replayed to a *different* account on the same
-    device. The service worker already refuses to cache /api/*; this closes
-    the same gap at the HTTP-cache layer.
+    * API responses must never sit in a browser or intermediary HTTP cache:
+      seller data is per-business and the browser HTTP cache keys on URL, not
+      on the Authorization header. A heuristically cacheable response could be
+      replayed to a *different* account on the same device.
+    * Uploaded files are served from an unauthenticated mount; `nosniff` stops
+      a browser from treating an image as a script/document.
     """
     response = await call_next(request)
-    if request.url.path.startswith("/api/"):
+    path = request.url.path
+    if path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    elif path.startswith("/uploads/"):
+        response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 

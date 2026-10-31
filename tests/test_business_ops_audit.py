@@ -109,8 +109,33 @@ def test_product_image_upload_round_trip(client):
     )
     assert rejected.status_code == 400
 
-    # Clean up the two files this test wrote to the shared uploads directory.
-    for url in (body["image_url"], second.json()["image_url"]):
+    # The stored extension comes from the content type, never the client's
+    # filename: an .html name with an image content type stays an image and
+    # cannot be served as HTML from /uploads (stored-XSS defence).
+    disguised = client.post(
+        upload_dir,
+        data={
+            "name": "Disguised",
+            "sku": "PHOTO-4",
+            "cost_price": "1.00",
+            "selling_price": "1.00",
+            "stock_quantity": "0",
+        },
+        files={"file": ("payload.html", png, "image/png")},
+        headers=seller["auth"],
+    )
+    assert disguised.status_code == 201, disguised.text
+    disguised_url = disguised.json()["image_url"]
+    assert disguised_url.endswith(".png"), disguised_url
+    assert ".html" not in disguised_url
+
+    served = client.get(disguised_url)
+    assert served.status_code == 200
+    assert served.headers["content-type"].startswith("image/png")
+    assert served.headers.get("x-content-type-options") == "nosniff"
+
+    # Clean up the files this test wrote to the shared uploads directory.
+    for url in (body["image_url"], second.json()["image_url"], disguised_url):
         path = os.path.join(UPLOAD_DIR, url.rsplit("/", 1)[-1])
         if os.path.exists(path):
             os.remove(path)

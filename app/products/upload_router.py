@@ -26,17 +26,17 @@ except OSError:
 
 
 def _safe_upload_name(original: str | None) -> str:
-    """A filesystem-safe, collision-resistant name derived from the client's.
+    """A filesystem-safe stem derived from the client's filename.
 
     Removes any path components (defence against absolute-path/`..` writes on
-    Windows and POSIX) and restricts the character set. The stored filename is
-    always generated server-side; the original name is never trusted.
+    Windows and POSIX) and restricts the character set. The stored extension
+    is chosen separately from the validated content type; this function only
+    contributes a cosmetic stem.
     """
     base = os.path.basename(original or "upload")
-    stem, ext = os.path.splitext(base)
+    stem, _ext = os.path.splitext(base)
     stem = re.sub(r"[^A-Za-z0-9._-]", "_", stem)[:60] or "image"
-    ext = re.sub(r"[^A-Za-z0-9.]", "", ext.lower())[:10]
-    return f"{stem}{ext}"
+    return stem
 
 
 @router.post("/upload", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
@@ -75,13 +75,25 @@ def create_product_endpoint(
         if len(content) > settings.max_upload_size:
             raise HTTPException(status_code=400, detail="File is too large")
 
+        # The stored extension is derived from the (allow-listed) content type,
+        # never from the client filename. Otherwise "payload.html" sent with
+        # Content-Type: image/png would be stored as .html and served as
+        # text/html from the unauthenticated /uploads mount — a stored-XSS
+        # vector on the application origin.
+        extension_by_type = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/png": ".png",
+        }
+        extension = extension_by_type[(file.content_type or "").lower()]
+
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         # 128 bits of randomness: the file is served from an unauthenticated
         # /uploads mount (capability-URL model), so the name must not be
         # guessable from business id + timestamp + original filename.
         filename = (
             f"{business_id}_{timestamp}_{secrets.token_hex(16)}_"
-            f"{_safe_upload_name(file.filename)}"
+            f"{_safe_upload_name(file.filename)}{extension}"
         )
         filepath = os.path.join(UPLOAD_DIR, filename)
         
