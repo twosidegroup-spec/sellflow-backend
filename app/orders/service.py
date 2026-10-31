@@ -8,6 +8,34 @@ from app.products.models import ProductStatus
 
 
 def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Order:
+    """Create an order. Kept for existing callers (seed script, tests).
+
+    Delegates to :func:`create_order_with_warnings` and drops the warnings —
+    use the tuple-returning function when the caller needs them.
+    """
+    order, _warnings = create_order_with_warnings(db, business_id, order_data)
+    return order
+
+
+def create_order_with_warnings(
+    db: Session, business_id: int, order_data: OrderCreate
+) -> tuple[Order, list[dict]]:
+    """Create an order and capture non-blocking stock warnings.
+
+    Approved Inventory Option C behaviour (STAGING_DEPLOYMENT brief):
+
+    * when a line's requested quantity exceeds the product's current stock
+      (including zero stock) a warning is collected — the order is
+      **never rejected** for stock reasons;
+    * warnings are returned to the caller for the API response;
+    * the same warnings are persisted, server-generated, in
+      ``orders.system_notes`` (never mixed into the seller-editable ``notes``).
+
+    Returns ``(order, warnings)`` where each warning is a dict matching
+    ``StockWarning``.
+    """
+    warnings: list[dict] = []
+
     # 1. Initialize totals
     total_amount = Decimal("0.00")
     total_cost = Decimal("0.00")
@@ -40,6 +68,23 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
             if product.status != ProductStatus.ACTIVE:
                 raise ValueError(
                     f"Product {item_data.product_id} is archived and cannot be ordered"
+                )
+
+            # Non-blocking stock check (Option C). The catalogue name and the
+            # current stock are the authoritative values for the warning.
+            stock_available = int(product.stock_quantity or 0)
+            if item_data.quantity > stock_available:
+                warnings.append(
+                    {
+                        "product_id": product.id,
+                        "product_name": product.name,
+                        "quantity_requested": item_data.quantity,
+                        "stock_available": stock_available,
+                        "message": (
+                            f"Requested {item_data.quantity} × {product.name}, "
+                            f"but only {stock_available} in stock"
+                        ),
+                    }
                 )
             
             # Use product's current cost if not explicitly provided, otherwise use provided
@@ -85,10 +130,17 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
     db_order.total_amount = float(final_amount)
     db_order.total_cost = float(total_cost)
     db_order.gross_profit = float(gross_profit)
-    
+
+    # 5. Persist server-generated system notes (approved Option C). Only the
+    #    system column is written; the seller's own `notes` stays untouched.
+    if warnings:
+        db_order.system_notes = "Stock warnings at order creation:\n" + "\n".join(
+            f"- {warning['message']}" for warning in warnings
+        )
+
     db.commit()
     db.refresh(db_order)
-    return db_order
+    return db_order, warnings
 
 def get_orders(
     db: Session,

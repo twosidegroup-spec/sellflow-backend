@@ -56,6 +56,11 @@ class Order(Base):
     
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
+    # Server-generated operational notes (e.g. stock warnings captured at
+    # order creation). Kept separate from the seller-editable `notes` field so
+    # machine text can never overwrite or be confused with seller text.
+    system_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
     # Payment state maintained by the payment-intelligence engine
     # (migrated from System A's orders.payment_status/payment_method).
     payment_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")

@@ -34,6 +34,20 @@ class OrderItemRead(BaseModel):
     profit: Decimal
     model_config = ConfigDict(from_attributes=True)
 
+
+class StockWarning(BaseModel):
+    """A non-blocking stock shortfall captured at order creation.
+
+    Warnings never reject an order (approved Inventory Option C); they are
+    returned to the client and persisted in `orders.system_notes`.
+    """
+
+    product_id: int | None = None
+    product_name: str
+    quantity_requested: int
+    stock_available: int
+    message: str
+
 class CustomerBrief(BaseModel):
     id: int
     name: str
@@ -56,7 +70,14 @@ class OrderRead(BaseModel):
     delivery_fee: Decimal
     discount: Decimal
     notes: str | None
+    system_notes: str | None = None
     created_at: datetime
     updated_at: datetime
     items: List[OrderItemRead]
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrderCreateResponse(OrderRead):
+    """Order creation result: the order plus non-blocking stock warnings."""
+
+    warnings: List[StockWarning] = []

@@ -3,7 +3,13 @@ from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
 from app.db.base import Business, Order
-from app.orders.schemas import OrderCreate, OrderRead, OrderStatusUpdate
+from app.orders.schemas import (
+    OrderCreate,
+    OrderCreateResponse,
+    OrderRead,
+    OrderStatusUpdate,
+    StockWarning,
+)
 from app.orders.models import OrderStatus, allowed_next_statuses
 from app.orders import service
 from app.notifications.service import send_order_notification
@@ -32,7 +38,7 @@ def list_orders(
         offset=offset,
     )
 
-@router.post("/", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=OrderCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_order_endpoint(
     business_id: int,
     order_data: OrderCreate,
@@ -40,9 +46,16 @@ def create_order_endpoint(
     current_business: Business = Depends(get_current_business)
 ):
     try:
-        return service.create_order(db, business_id, order_data)
+        order, warnings = service.create_order_with_warnings(db, business_id, order_data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # Non-blocking stock warnings (approved Inventory Option C): the order is
+    # always created; the client receives the warnings and the server records
+    # them in orders.system_notes (done inside the service).
+    response = OrderCreateResponse.model_validate(order)
+    response.warnings = [StockWarning(**warning) for warning in warnings]
+    return response
 
 @router.get("/{order_id}", response_model=OrderRead)
 def get_order_endpoint(

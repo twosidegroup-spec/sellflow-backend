@@ -217,7 +217,7 @@ function paintRows(root, ctx) {
             <tr data-id="${order.id}">
               <td class="cell-lead" data-label="Order">
                 <span class="cell-title">#${order.id}${order.is_cod ? ` <span class="reason-tag">COD</span>` : ""}</span>
-                <span class="cell-sub">${esc(fmt.relative(order.created_at))}${order.notes ? " · has note" : ""}</span>
+                <span class="cell-sub">${esc(fmt.relative(order.created_at))}${order.notes ? " · has note" : ""}${order.system_notes ? " · stock warning" : ""}</span>
               </td>
               <td data-label="Customer">${esc(order.customer?.name || "Walk-in")}</td>
               <td class="num" data-label="Items">${fmt.num((order.items || []).reduce((sum, item) => sum + item.quantity, 0))}</td>
@@ -466,6 +466,7 @@ async function openOrderDetail(root, ctx, orderId) {
             : `<div class="pill-note">${icon("info", 14)} No payment recorded for this order yet.${order.is_cod ? " This is a COD order — collect on delivery, then record the payment." : ""}</div>`
         }
         ${order.notes ? `<div class="pill-note">${icon("fileText", 14)} ${esc(order.notes)}</div>` : ""}
+        ${order.system_notes ? `<div class="pill-note">${icon("alert", 14)} <span style="white-space:pre-line">${esc(order.system_notes)}</span></div>` : ""}
       </div>`,
     footer: `
       <button class="btn" data-close-modal>Close</button>
@@ -650,7 +651,16 @@ function openCreateOrder(root, ctx) {
       if (customerId) payload.customer_id = Number(customerId);
       const order = await api.createOrder(ctx.businessId, payload);
       close();
-      toast(`Order #${order.id} created${payload.is_cod ? " · cash on delivery" : ""}`, { title: "Order added" });
+      const warnings = order.warnings || [];
+      if (warnings.length) {
+        // Non-blocking: the order was created; the seller is told what is short.
+        toast(warnings.map((warning) => warning.message).join(" · "), {
+          type: "warn",
+          title: `Order #${order.id} created — stock warning${warnings.length === 1 ? "" : "s"}`,
+        });
+      } else {
+        toast(`Order #${order.id} created${payload.is_cod ? " · cash on delivery" : ""}`, { title: "Order added" });
+      }
       state.offset = 0;
       await load(root, ctx);
     } catch (error) {
