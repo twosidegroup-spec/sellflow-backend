@@ -17,6 +17,8 @@ def create_user(db: Session, user_data: UserCreate) -> tuple[User, Business | No
         email=user_data.email,
         full_name=user_data.full_name,
         phone=user_data.phone,
+        payment_provider=user_data.payment_provider,
+        receiving_number=user_data.receiving_number,
         hashed_password=get_password_hash(user_data.password),
     )
     db.add(db_user)

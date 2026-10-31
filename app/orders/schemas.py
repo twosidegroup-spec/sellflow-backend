@@ -14,8 +14,8 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     customer_id: int | None = None
     items: List[OrderItemCreate]
-    delivery_fee: Decimal = Field(ge=0, decimal_places=2, default=0.0)
-    discount: Decimal = Field(ge=0, decimal_places=2, default=0.0)
+    delivery_fee: Decimal = Field(ge=0, decimal_places=2, default=Decimal("0.00"))
+    discount: Decimal = Field(ge=0, decimal_places=2, default=Decimal("0.00"))
     notes: str | None = Field(default=None, max_length=1000)
 
 class OrderStatusUpdate(BaseModel):

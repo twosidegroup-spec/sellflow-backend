@@ -1,9 +1,44 @@
-﻿.venv/
-venv/
-.env
+﻿# Python bytecode
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.coverage
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment variables (CRITICAL - NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Local files
+uploads/*
+!uploads/.gitkeep
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+*.log
+*.tmp
+
+# Flutter mobile client (source in this repo since the backend-first merge)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml

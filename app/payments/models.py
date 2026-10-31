@@ -1,5 +1,5 @@
 ﻿from datetime import datetime
-from sqlalchemy import String, Numeric, ForeignKey, DateTime, func, UniqueConstraint, Enum as SQLEnum
+from sqlalchemy import String, Numeric, ForeignKey, DateTime, func, UniqueConstraint, Enum as SQLEnum, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.engine import Base
 import enum
@@ -34,3 +34,28 @@ class Payment(Base):
     __table_args__ = (
         UniqueConstraint('business_id', 'method', 'transaction_id', name='uq_payment_business_method_txid'),
     )
+
+
+class DetectedPayment(Base):
+    """A payment captured automatically from bKash / Nagad / other providers.
+
+    Unmatched detections live here until an order with the same amount exists;
+    when matched, a real Payment record is created and linked.
+    """
+    __tablename__ = "detected_payments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True, nullable=False)
+
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    method: Mapped[str] = mapped_column(String(50), nullable=False)
+    sender_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    receiver_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    matched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

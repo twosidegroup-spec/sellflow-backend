@@ -1,6 +1,8 @@
 ﻿from pydantic import BaseModel, Field, ConfigDict
 from decimal import Decimal
 from datetime import datetime
+from typing import Optional
+
 
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
@@ -9,6 +11,8 @@ class ProductCreate(BaseModel):
     cost_price: Decimal = Field(ge=0, decimal_places=2)
     selling_price: Decimal = Field(ge=0, decimal_places=2)
     stock_quantity: int = Field(ge=0, default=0)
+    image_url: Optional[str] = Field(default=None)
+
 
 class ProductUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -16,6 +20,7 @@ class ProductUpdate(BaseModel):
     cost_price: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     selling_price: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     stock_quantity: int | None = Field(default=None, ge=0)
+
 
 class ProductRead(BaseModel):
     id: int

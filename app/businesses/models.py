@@ -22,6 +22,7 @@ class Business(Base):
 
     memberships = relationship("Membership", back_populates="business", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="business", cascade="all, delete-orphan")
+    webhooks = relationship("WebhookSubscription", back_populates="business", cascade="all, delete-orphan")
     customers = relationship("Customer", back_populates="business", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="business", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="business", cascade="all, delete-orphan")

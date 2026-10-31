@@ -104,3 +104,36 @@ class ReconciliationReport(BaseModel):
     discrepancy_amount: Decimal
     recommendations: List[str]
     generated_at: datetime
+
+
+class DetectionRequest(BaseModel):
+    receiver_number: str = Field(min_length=1, max_length=50)
+    amount: Decimal = Field(gt=0, decimal_places=2)
+    method: str = Field(min_length=1, max_length=50)
+    sender_number: Optional[str] = Field(default=None, max_length=50)
+    transaction_id: Optional[str] = Field(default=None, max_length=255)
+    paid_at: Optional[datetime] = None
+
+
+class DetectionResponse(BaseModel):
+    detection_id: int
+    business_id: int
+    matched: bool
+    order_id: Optional[int] = None
+    payment_id: Optional[int] = None
+
+
+class DetectedPaymentRead(BaseModel):
+    id: int
+    business_id: int
+    amount: Decimal
+    method: str
+    sender_number: Optional[str]
+    receiver_number: Optional[str]
+    transaction_id: Optional[str]
+    paid_at: Optional[datetime]
+    matched: bool
+    order_id: Optional[int]
+    payment_id: Optional[int]
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

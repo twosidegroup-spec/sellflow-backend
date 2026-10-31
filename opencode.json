@@ -1,0 +1,61 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "river/deepseek-ai/DeepSeek-V4.1-Flash",
+  "providers": {
+    "river": {
+      "name": "River AI",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "https://api.river.ai/v1",
+        "apiKey": "rv_oGMfouwyNjDbZS6kmoUmimMn9x7pNQC-VvWEd6ptyUU"
+      },
+      "models": {
+        "deepseek-ai/DeepSeek-V4.1-Flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "compatibility": {
+            "reasoningField": "reasoning_content"
+          },
+          "capabilities": {
+            "tools": true,
+            "input": ["text", "image"],
+            "output": ["text"],
+            "reasoning": {
+              "supported": true,
+              "toggle": true,
+              "effort": ["high", "max"]
+            }
+          },
+          "limit": {
+            "context": 1048576,
+            "output": 384000
+          },
+          "body": {
+            "reasoning_effort": "max"
+          }
+        }
+      }
+    },
+    "xkiro": {
+      "name": "Xkiro API",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "https://api.xkiro.com/v1",
+        "apiKey": "sk-xt-eb8edc619235da5b1782e04fa0927e0b7a3e34250db1208c"
+      },
+      "models": {
+        "qwen/qwen3.8-max:free": {
+          "name": "Qwen 3.8 Max Free",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"]
+          },
+          "limit": {
+            "context": 131072,
+            "output": 65536
+          }
+        }
+      }
+    }
+  }
+}

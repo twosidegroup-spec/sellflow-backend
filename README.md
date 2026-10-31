@@ -1,137 +1,143 @@
-﻿# SELLFLOW Backend
+﻿# SELLFLOW Backend Deployment
 
-Seller Execution Engine for social commerce.
+## Quick Deploy to Render (Recommended)
 
-## Overview
-
-The backend is a FastAPI-based REST API that provides all the core functionality for the SELLFLOW platform. It handles:
-
-- User authentication and authorization (JWT-based)
-- Multi-tenant business management
-- Product catalog management
-- Customer relationship management
-- Order processing and tracking
-- Payment processing
-- Delivery management
-- Business analytics
-
-## Tech Stack
-
-- **Framework**: FastAPI 0.115.0
-- **Database**: PostgreSQL with SQLAlchemy 2.0 ORM
-- **Migrations**: Alembic 1.13.3
-- **Authentication**: JWT (python-jose)
-- **Password Hashing**: Bcrypt
-
-## API Structure
-
-All API endpoints are prefixed with `/api/v1` and organized by domain:
-
-| Route | Description |
-|-------|-------------|
-| `/auth/*` | User authentication (register, login) |
-| `/businesses/{business_id}/*` | Business-specific resources |
-|   `/products` | Product CRUD operations |
-|   `/customers` | Customer management |
-|   `/orders` | Order processing |
-|   `/payments` | Payment transactions |
-|   `/deliveries` | Delivery tracking |
-|   `/analytics/summary` | Business analytics |
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.11+
-- PostgreSQL 14+
-- Docker (optional, for development)
-
-### Installation
-
-1. Clone the repository:
+### 1. Prepare Environment Variables
 ```bash
-git clone <repository-url>
-cd backend
+# Generate secret key
+openssl rand -hex 32
+
+# In PostgreSQL (Supabase/Render):
+CREATE DATABASE sellflow_db;
 ```
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+### 2. Configure Render
+1. Go to [render.com](https://render.com)
+2. Click **New** → **Web Service**
+3. Connect your GitHub repository
+4. Configure:
+
+| Setting | Value |
+|---------|-------|
+| Name | `sellflow-backend` |
+| Branch | `main` |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4` |
+| Environment | `Python 3.11` |
+
+### 3. Add Environment Variables
+```
+DATABASE_URL=postgresql://user:password@host:5432/sellflow_db
+SECRET_KEY=your-32-character-secret-key
+APP_ENV=production
+APP_DEBUG=false
+CORS_ORIGINS=https://your-app.vercel.app
 ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Set up environment variables (copy and modify `.env.example`):
-```bash
-cp .env.example .env
-```
-
-5. Run database migrations:
+### 4. Run Migrations
+After first deploy, run in Render dashboard:
 ```bash
 alembic upgrade head
 ```
 
-6. Start the development server:
+---
+
+## Local Development
+
+### Start Server
 ```bash
-uvicorn app.main:app --reload
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Mac/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run migrations
+alembic upgrade head
+
+# Start server
+uvicorn app.main:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.
+### API Documentation
+```
+Swagger UI: http://localhost:8000/docs
+ReDoc: http://localhost:8000/redoc
+```
 
-## API Documentation
+---
 
-Once running, access:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+## Cloud Storage (For File Uploads)
+
+**Current Issue:** Files stored locally in `uploads/` directory
+
+**Solution:** Use Cloudflare R2 (free) or AWS S3
+
+### Cloudflare R2 Setup
+```env
+AWS_ACCESS_KEY_ID=your-r2-key-id
+AWS_SECRET_ACCESS_KEY=your-r2-key-secret
+AWS_S3_BUCKET_NAME=your-bucket
+AWS_REGION=auto
+AWS_S3_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
+```
+
+---
 
 ## Testing
 
-Run tests with pytest:
 ```bash
+# Run all tests
 pytest
+
+# Run specific test file
+pytest tests/test_auth.py -v
+
+# Check migrations
+alembic history
+alembic current
 ```
 
-## Docker
+---
 
-Run with Docker Compose:
+## Troubleshooting
+
+### Connection Issues
 ```bash
-docker-compose up -d
+# Check database connection
+.venv\Scripts\python.exe -c "from sqlalchemy import create_engine; print(create_engine(DATABASE_URL).connect())"
 ```
 
-## Project Structure
-
-```
-backend/
-├── app/
-│   ├── auth/          # Authentication & user management
-│   ├── businesses/    # Business entity & memberships
-│   ├── products/      # Product catalog
-│   ├── customers/     # Customer management
-│   ├── orders/        # Order processing
-│   ├── payments/      # Payment processing
-│   ├── deliveries/    # Delivery tracking
-│   ├── analytics/     # Business analytics
-│   ├── core/          # Shared utilities (security, config)
-│   ├── db/            # Database models & migrations
-│   └── main.py        # Application entry point
-├── tests/             # Test suite
-├── alembic/           # Database migrations
-├── requirements.txt   # Python dependencies
-└── docker-compose.yml # Docker configuration
+### Migration Issues
+```bash
+# Reset migration history
+alembic downgrade base
+alembic upgrade head
 ```
 
-## Environment Variables
+---
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `SECRET_KEY` | JWT signing secret | Yes |
-| `APP_ENV` | Environment (development/production) | No |
+## Endpoints Summary
 
-## License
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/register` | User registration |
+| POST | `/api/v1/auth/login` | User login |
+| GET | `/api/v1/businesses/{id}/products` | List products |
+| POST | `/api/v1/businesses/{id}/products` | Create product (with upload) |
+| POST | `/api/v1/businesses/{id}/payments/reconcile-mobile` | Payment reconciliation |
+| POST | `/api/v1/businesses/{id}/webhooks` | Register webhook |
+| GET | `/health` | Health check |
 
-MIT
+---
+
+## Status
+
+- [x] 25/25 tests passing
+- [x] Database migrations ready
+- [x] API endpoints working
+- [x] File upload functionality
+- [x] Webhook support
+- [ ] Cloud storage integration (S3/R2)
