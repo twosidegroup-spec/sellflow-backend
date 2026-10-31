@@ -269,7 +269,7 @@ function renderSecurity(panel) {
         </form>
       </div>
       <div class="card__foot">
-        <span class="small dim">${icon("shield", 13)} Sessions stay signed in until the token expires.</span>
+        <span class="small dim">${icon("shield", 13)} Changing your password signs out every session, including this one.</span>
         <button class="btn btn--primary js-save-pass">${icon("key", 15)} Update password</button>
       </div>
     </div>
@@ -292,8 +292,9 @@ function renderSecurity(panel) {
     setBusy(event.currentTarget, true, "Updating…");
     try {
       await api.changePasscode(values.current_password, values.new_password);
-      toast("Password updated");
       form.reset();
+      // All sessions were revoked by the token-version bump — sign out.
+      window.dispatchEvent(new CustomEvent("sf:session-revoked"));
     } catch (error) {
       if (error.status === 401) {
         fieldError(form, "current_password", "Current password is incorrect");

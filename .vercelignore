@@ -10,6 +10,12 @@ __pycache__/
 .pytest_cache/
 .database_notes.txt
 
+# Environment files: local/staging values must never reach a build.
+# `.env.example` is the tracked, value-free template.
+.env
+.env.*
+!.env.example
+
 # Tests and scripts are not needed at runtime
 tests/
 scripts/

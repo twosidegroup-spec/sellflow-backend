@@ -389,6 +389,19 @@ async function boot() {
     toast("Your session expired. Please sign in again.", { type: "warn" });
     window.location.hash = "#/login";
   });
+  // A deliberate password change revokes every session for the user, including
+  // this one (token-version bump). Same cleanup, accurate message.
+  window.addEventListener("sf:session-revoked", () => {
+    api.clearSession();
+    shellMounted = false;
+    try {
+      sessionStorage.clear();
+    } catch {
+      /* private mode */
+    }
+    toast("Password updated. Please sign in again.", { type: "info" });
+    window.location.hash = "#/login";
+  });
   window.addEventListener("sf:profile-updated", async () => {
     try {
       await loadSession();

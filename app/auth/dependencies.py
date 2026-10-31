@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.db.base import User
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, token_version_matches
 
 # This tells FastAPI to expect a "Bearer <token>" in the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -32,5 +32,9 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
-        
+
+    # 4. Revocation channel: reject tokens whose version was superseded
+    if not token_version_matches(payload, user):
+        raise credentials_exception
+
     return user

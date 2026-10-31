@@ -7,6 +7,13 @@ and the staging checklist. Nothing here deploys anything or changes business pol
 **Secret policy:** no credential, token, or connection string is printed in this file or in the
 commands below. Fingerprints (SHA-256 prefixes) are used where a comparison is needed.
 
+> **STATUS UPDATE (2026-10-31, staging preparation):** the transition matrix (§4.1) and the
+> token-version revocation channel (§5) documented below have been **implemented** as proposed,
+> and the staging checklist was executed locally. See `STAGING_EXECUTION_REPORT.md` for the
+> executed evidence, commit hashes, and remaining items. Inventory Option C (§4.2) remains
+> **documented-only, awaiting clarification** — its mechanics were reported, not implemented.
+> The `APP_ENV=staging` recommendation (§3.2) stands.
+
 Labels: **FACT** = verified by execution in this repository. **ASSUMPTION** = believed true but
 not verified. **UNKNOWN** = cannot be determined from this environment.
 

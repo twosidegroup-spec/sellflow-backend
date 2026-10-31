@@ -117,7 +117,12 @@ def login_user(user_data: UserLogin, request: Request, db: Session = Depends(get
             detail="Incorrect passcode",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return {"access_token": create_access_token(data={"sub": str(user.id)}), "token_type": "bearer"}
+    return {
+        "access_token": create_access_token(
+            data={"sub": str(user.id), "ver": int(user.token_version or 0)}
+        ),
+        "token_type": "bearer",
+    }
 
 def _user_read(current_user: User) -> UserRead:
     business = None
@@ -174,6 +179,10 @@ def change_passcode(
             detail="Current passcode is incorrect",
         )
     current_user.hashed_password = get_password_hash(user_data.new_password)
+    # Revoke every existing session for this user (all JWTs carry the previous
+    # `ver` claim). The caller's own token is invalidated too; the console
+    # signs out and asks for a fresh login.
+    current_user.token_version = int(current_user.token_version or 0) + 1
     db.add(current_user)
     db.commit()
     return {"status": "ok", "message": "Passcode updated"}

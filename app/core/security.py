@@ -31,3 +31,19 @@ def decode_access_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def token_version_matches(payload: dict, user) -> bool:
+    """True when the token's `ver` claim matches the user's token_version.
+
+    Hard cutover (STAGING_READINESS.md 5.1): a missing or malformed claim never
+    matches, so tokens issued before the revocation channel existed are
+    rejected once the migration is applied.
+    """
+    claim = payload.get("ver")
+    if claim is None:
+        return False
+    try:
+        return int(claim) == int(getattr(user, "token_version", 0) or 0)
+    except (TypeError, ValueError):
+        return False

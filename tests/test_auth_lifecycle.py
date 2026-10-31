@@ -5,8 +5,9 @@ Covers the paths not already pinned by `test_auth.py`:
 * duplicate registration, login for unknown emails
 * expired and malformed JWTs, tokens for deleted users
 * JWT payload hygiene (no secrets, sane expiry)
-* stateless-token semantics (there is no server-side logout/revocation list —
-  documented behaviour, asserted explicitly so a change is noticed)
+* token-version revocation: a password change invalidates every previously
+  issued token (see also `test_token_version_audit.py`); there is still no
+  logout endpoint — the bearer token remains stateless until revoked
 """
 
 from __future__ import annotations
@@ -84,13 +85,12 @@ def test_issued_token_payload_has_no_secrets_and_sane_expiry(client):
     assert "password" not in serialized and "hash" not in serialized
 
 
-def test_tokens_are_stateless_no_logout_revocation_endpoint(client):
-    """Documents the current security model (24h bearer tokens).
+def test_password_change_revokes_existing_tokens(client):
+    """Per-user token-version revocation (STAGING_READINESS.md 5.1).
 
-    There is no server-side logout endpoint and no revocation list: a token
-    remains valid until it expires even after a password change. The UI
-    "logout" discards the token client-side. If this ever becomes a hard
-    requirement, add a per-user token version and bump it on password change.
+    There is still no logout endpoint — the token remains a stateless bearer
+    credential — but a password change bumps the user's `token_version`, so
+    every previously issued token is rejected immediately.
     """
     seller = register_seller(client)
 
@@ -104,6 +104,18 @@ def test_tokens_are_stateless_no_logout_revocation_endpoint(client):
     )
     assert changed.status_code == 200, changed.text
 
-    # The old token still authenticates — stateless JWT semantics.
-    still_valid = client.get("/api/v1/auth/me", headers=seller["auth"])
-    assert still_valid.status_code == 200
+    # The old token is revoked everywhere.
+    revoked = client.get("/api/v1/auth/me", headers=seller["auth"])
+    assert revoked.status_code == 401
+
+    # A fresh login with the new password works.
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": seller["email"], "password": "pass12345"},
+    )
+    assert login.status_code == 200
+    fresh = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+    assert fresh.status_code == 200

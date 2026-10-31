@@ -21,7 +21,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, token_version_matches
 from app.db.base import Membership
 from app.db.dependencies import get_db
 from app.devices.bridge_service import DEVICE_BRIDGE_SERVICE
@@ -42,7 +42,13 @@ def _optional_user(
     token: str | None = Depends(_oauth2_optional),
     db: Session = Depends(get_db),
 ) -> User | None:
-    """The JWT user when a valid Bearer token is present, else None."""
+    """The JWT user when a valid Bearer token is present, else None.
+
+    Applies the same revocation check as `get_current_user`: a token whose
+    `ver` claim does not match the user's current token_version resolves to
+    None (callers decide whether that is fatal — device-token requests do not
+    depend on a user JWT).
+    """
     if not token:
         return None
     payload = decode_access_token(token)
@@ -51,7 +57,10 @@ def _optional_user(
     user_id = payload.get("sub")
     if user_id is None:
         return None
-    return db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None or not token_version_matches(payload, user):
+        return None
+    return user
 
 
 def require_device_principal(
