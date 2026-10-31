@@ -33,6 +33,11 @@ class Product(Base):
     business = relationship("Business", back_populates="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
 
+    @property
+    def image_url(self) -> str | None:
+        """Primary image URL, exposed for API responses (e.g. ProductRead)."""
+        return self.images[0].image_url if self.images else None
+
 
 class ProductImage(Base):
     __tablename__ = "product_images"

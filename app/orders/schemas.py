@@ -38,6 +38,8 @@ class OrderRead(BaseModel):
     business_id: int
     customer_id: int | None
     status: OrderStatus
+    payment_status: str = "pending"
+    payment_method: str | None = None
     total_amount: Decimal
     total_cost: Decimal
     gross_profit: Decimal

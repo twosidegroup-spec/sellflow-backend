@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
 from app.db.base import Business, Membership
+from app.businesses.models import MembershipRole
 from app.businesses.schemas import BusinessRead, BusinessUpdate
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
@@ -80,47 +81,64 @@ def add_business_membership(
     Add a member to the business.
     Only owners and admins can add members.
     """
-    if current_user.is_owner(current_business.id, db):
-        role = membership_data.get("role", "staff")
-        user_id = membership_data.get("user_id")
-        
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id is required"
-            )
-        
-        # Check if membership already exists
-        existing = db.query(Membership).filter(
-            Membership.user_id == user_id,
-            Membership.business_id == business_id
-        ).first()
-        
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User is already a member of this business"
-            )
-        
-        membership = Membership(
-            user_id=user_id,
-            business_id=business_id,
-            role=role
-        )
-        db.add(membership)
-        db.commit()
-        db.refresh(membership)
-        
-        return {
-            "user_id": membership.user_id,
-            "business_id": membership.business_id,
-            "role": membership.role.value,
-        }
-    else:
+    if not (current_user.is_owner(current_business.id, db) or current_user.is_admin(current_business.id, db)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only owners and admins can add members"
+            detail="Only owners and admins can add members",
         )
+
+    role_value = str(membership_data.get("role", "staff")).strip().lower()
+    if role_value not in {role.value for role in MembershipRole}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"role must be one of {sorted(role.value for role in MembershipRole)}",
+        )
+    if role_value == MembershipRole.OWNER.value and not current_user.is_owner(current_business.id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only an owner can grant the owner role",
+        )
+
+    user_id = membership_data.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id is required"
+        )
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if target_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Check if membership already exists
+    existing = db.query(Membership).filter(
+        Membership.user_id == user_id,
+        Membership.business_id == business_id
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already a member of this business"
+        )
+
+    membership = Membership(
+        user_id=user_id,
+        business_id=business_id,
+        role=MembershipRole(role_value),
+    )
+    db.add(membership)
+    db.commit()
+    db.refresh(membership)
+
+    return {
+        "user_id": membership.user_id,
+        "business_id": membership.business_id,
+        "role": membership.role.value,
+    }
 
 
 @router.delete("/{business_id}/memberships/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -135,22 +153,22 @@ def remove_business_membership(
     Remove a member from the business.
     Only owners and admins can remove members.
     """
-    if current_user.is_owner(current_business.id, db):
-        membership = db.query(Membership).filter(
-            Membership.user_id == user_id,
-            Membership.business_id == business_id
-        ).first()
-        
-        if not membership:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Membership not found"
-            )
-        
-        db.delete(membership)
-        db.commit()
-    else:
+    if not (current_user.is_owner(current_business.id, db) or current_user.is_admin(current_business.id, db)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only owners and admins can remove members"
+            detail="Only owners and admins can remove members",
         )
+
+    membership = db.query(Membership).filter(
+        Membership.user_id == user_id,
+        Membership.business_id == business_id
+    ).first()
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership not found"
+        )
+
+    db.delete(membership)
+    db.commit()

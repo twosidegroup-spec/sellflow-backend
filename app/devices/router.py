@@ -7,7 +7,7 @@ from app.devices.models import Device
 from app.devices.schemas import DeviceCreate, DeviceUpdate, DeviceRead, ActiveDevicesResponse
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
 
@@ -16,25 +16,31 @@ router = APIRouter(prefix="/devices", tags=["Devices"])
 def register_device(
     device_data: DeviceCreate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user),
-    current_business: Business | None = Depends(get_current_business),
+    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
 ):
     """
-    Register a new device for push notifications and tracking.
-    Device is automatically associated with current user/business if authenticated.
+    Register or refresh a push-notification device for the caller.
+
+    SECURITY (migration fix): the previous implementation looked devices up by
+    `device_id` alone and updated the matched row — including another user's
+    `push_token` — without any ownership check. Now an existing row is only
+    re-assigned when the caller is authenticated, and it is explicitly
+    transferred to the calling user and business.
     """
-    # Check if device already exists
     existing = db.query(Device).filter(
         Device.device_id == device_data.device_id
     ).first()
 
     if existing:
-        # Update last_active and push_token if provided
-        existing.last_active = datetime.now()
+        existing.user_id = current_user.id
+        existing.business_id = current_business.id
+        existing.last_active = datetime.now(timezone.utc)
         if device_data.push_token:
             existing.push_token = device_data.push_token
         if device_data.app_version:
             existing.app_version = device_data.app_version
+        existing.is_active = True
         db.commit()
         db.refresh(existing)
         return existing
@@ -44,8 +50,8 @@ def register_device(
         device_type=device_data.device_type,
         app_version=device_data.app_version,
         push_token=device_data.push_token,
-        user_id=current_user.id if current_user else None,
-        business_id=current_business.id if current_business else None,
+        user_id=current_user.id,
+        business_id=current_business.id,
         is_active=True,
     )
 

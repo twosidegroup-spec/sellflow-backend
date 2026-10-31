@@ -1,6 +1,17 @@
 ﻿# SELLFLOW Backend Deployment
 
+> **Post-migration docs (System A → System B):** see `MIGRATION_REPORT.md`,
+> `CANONICAL_ARCHITECTURE.md`, `API_COMPATIBILITY.md`, `MIGRATION_CHECKLIST.md`
+> and `SYSTEM_A_COMPONENT_MAPPING.md`. The payment-intelligence engine, device
+> bridge (`/device-bridge/*`) and payment accounts (`/payment-accounts/*`) now
+> run in this backend. The legacy public endpoints `POST /api/orders`,
+> `POST /api/products`, `POST /api/customers` were removed (unauthenticated),
+> and `POST /api/v1/payments/detect` is a JWT-authenticated, non-production
+> development simulator. Production now requires `SECRET_KEY` and
+> `DEVICE_TOKEN_SECRET` (the app refuses to start without them).
+
 ## Quick Deploy to Render (Recommended)
+
 
 ### 1. Prepare Environment Variables
 ```bash

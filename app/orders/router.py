@@ -7,6 +7,7 @@ from app.orders.schemas import OrderCreate, OrderRead, OrderStatusUpdate
 from app.orders.models import OrderStatus
 from app.orders import service
 from app.notifications.service import send_order_notification
+from app.webhooks.dispatcher import dispatch_event
 
 router = APIRouter(prefix="/businesses/{business_id}/orders", tags=["Orders"])
 
@@ -69,6 +70,17 @@ def update_order_status_endpoint(
             order_id=order.id,
             status=status_update.status.value,
             customer_email=mock_customer_email
+        )
+        background_tasks.add_task(
+            dispatch_event,
+            business_id,
+            "order.status_changed",
+            {
+                "order_id": order.id,
+                "business_id": business_id,
+                "old_status": old_status.value if hasattr(old_status, "value") else str(old_status),
+                "new_status": status_update.status.value,
+            },
         )
         
     return order

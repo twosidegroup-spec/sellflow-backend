@@ -1,7 +1,10 @@
-﻿from fastapi import APIRouter
+﻿import logging
+
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 
 router = APIRouter(tags=["Health"])
+logger = logging.getLogger("sellflow.health")
 
 
 @router.get("/status")
@@ -13,7 +16,7 @@ async def health_status():
     return {
         "status": "ok",
         "service": "sellflow-api",
-        "version": "0.8.0",
+        "version": "0.9.0",
     }
 
 
@@ -21,35 +24,64 @@ async def health_status():
 async def database_health():
     """
     Database connectivity check.
-    Verifies the database connection is working.
+
+    Returns a generic status only. The previous implementation echoed
+    `str(e)` to the caller, which could disclose connection details or
+    schema fragments; the detail is logged server-side instead.
     """
+    from app.db.engine import SessionLocal
+
+    db = None
     try:
-        from app.db.engine import SessionLocal
         db = SessionLocal()
         db.execute(text("SELECT 1"))
-        db.close()
         return {
             "status": "ok",
             "database": "connected",
         }
-    except Exception as e:
+    except Exception:  # noqa: BLE001 - health probe must not raise
+        logger.exception("database health check failed")
         return {
             "status": "error",
             "database": "disconnected",
-            "error": str(e),
         }
+    finally:
+        if db is not None:
+            db.close()
 
 
 @router.get("/ready")
 async def readiness_check():
     """
     Readiness probe for Kubernetes/container orchestration.
-    Indicates when the service is ready to receive traffic.
+
+    Unlike the previous hardcoded response, this actually probes the
+    database and answers 503 when the API cannot serve traffic.
     """
+    from app.db.engine import SessionLocal
+
+    db = None
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        database = "ok"
+    except Exception:  # noqa: BLE001 - report, do not raise
+        logger.exception("readiness check failed")
+        database = "error"
+    finally:
+        if db is not None:
+            db.close()
+
+    if database != "ok":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"ready": False, "checks": {"database": database, "api": "ok"}},
+        )
+
     return {
         "ready": True,
         "checks": {
             "database": "ok",
             "api": "ok",
-        }
+        },
     }

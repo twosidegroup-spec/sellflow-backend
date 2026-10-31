@@ -31,6 +31,7 @@ class ProductRead(BaseModel):
     cost_price: Decimal
     selling_price: Decimal
     stock_quantity: int
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

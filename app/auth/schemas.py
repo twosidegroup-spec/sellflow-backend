@@ -9,6 +9,8 @@ class UserCreate(BaseModel):
     # Optional fields for UI completeness (stored for future payment integration)
     payment_provider: str | None = Field(default=None, max_length=20)
     receiving_number: str | None = Field(default=None, max_length=50)
+    # Required only when the server has REGISTRATION_INVITE_CODE configured.
+    invite_code: str | None = Field(default=None, max_length=200)
 
 class UserLogin(BaseModel):
     email: EmailStr

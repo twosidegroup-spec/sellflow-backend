@@ -25,22 +25,25 @@ def record_payment(db: Session, business_id: int, order_id: int, payment_data: P
             # Idempotent behavior: return the existing payment instead of creating a duplicate
             return existing_payment
 
-    # 3. Reconciliation Check: Prevent massive overpayments (optional but recommended)
-    # Calculate total already paid for this order
+    # 3. Guard against absurd over-collection. The previous implementation
+    #    computed this and then did nothing (`pass`), so any amount was
+    #    accepted and stored as `verified`.
     paid_amount = Decimal(str(db.query(func.sum(Payment.amount)).filter(
         Payment.order_id == order_id,
         Payment.status == PaymentStatus.VERIFIED
-    ).scalar() or 0.0))
-    
-    # FIX: Multiply Decimal by Decimal, not float
-    if paid_amount + payment_data.amount > Decimal(str(order.total_amount)) * Decimal("1.5"):
-        pass # Allow up to 150% to account for minor rounding or delivery fee adjustments
+    ).scalar() or 0))
+    order_total = Decimal(str(order.total_amount))
+    new_amount = Decimal(str(payment_data.amount))
+    if order_total > 0 and paid_amount + new_amount > order_total * Decimal("1.5"):
+        raise ValueError(
+            "Recording this payment would exceed 150% of the order total"
+        )
 
     # 4. Create the payment record
     db_payment = Payment(
         business_id=business_id,
         order_id=order_id,
-        amount=float(payment_data.amount),
+        amount=float(new_amount),
         method=payment_data.method.lower(),
         transaction_id=payment_data.transaction_id,
         status=PaymentStatus.VERIFIED, 
@@ -49,6 +52,12 @@ def record_payment(db: Session, business_id: int, order_id: int, payment_data: P
     )
     
     db.add(db_payment)
+
+    # 5. Keep the order's payment state in sync (mirrors the payment
+    #    intelligence pipeline's behaviour).
+    order.payment_status = "paid"
+    order.payment_method = payment_data.method.lower()
+
     try:
         db.commit()
         db.refresh(db_payment)

@@ -5,10 +5,30 @@ from app.businesses.models import Business, Membership
 from app.products.models import Product, ProductImage
 from app.customers.models import Customer
 from app.orders.models import Order, OrderItem
-from app.payments.models import Payment
+from app.payments.models import Payment, DetectedPayment, PaymentAccount
 from app.deliveries.models import Delivery
-from app.devices.models import Device
+from app.devices.models import Device, DevicePairingCode
 from app.core.rate_limit import RateLimitEvent
 from app.webhooks.models import WebhookSubscription
+from app.payments.intelligence import db_models as payment_intelligence_models  # noqa: F401
 
-__all__ = ["Base", "User", "Business", "Membership", "Product", "ProductImage", "Customer", "Order", "OrderItem", "Payment", "Delivery", "Device", "RateLimitEvent", "WebhookSubscription"]
+__all__ = [
+    "Base",
+    "User",
+    "Business",
+    "Membership",
+    "Product",
+    "ProductImage",
+    "Customer",
+    "Order",
+    "OrderItem",
+    "Payment",
+    "DetectedPayment",
+    "PaymentAccount",
+    "Delivery",
+    "Device",
+    "DevicePairingCode",
+    "RateLimitEvent",
+    "WebhookSubscription",
+]
+

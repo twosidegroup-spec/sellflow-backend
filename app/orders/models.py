@@ -28,7 +28,12 @@ class Order(Base):
     discount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0.0)
     
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    
+
+    # Payment state maintained by the payment-intelligence engine
+    # (migrated from System A's orders.payment_status/payment_method).
+    payment_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    payment_method: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

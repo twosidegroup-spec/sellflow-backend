@@ -1,9 +1,11 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+﻿from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from decimal import Decimal
 from datetime import datetime
+from app.core.config import settings
+from app.core.rate_limit import check_rate_limit
 from app.db.dependencies import get_db
-from app.businesses.dependencies import get_current_business
+from app.businesses.dependencies import get_current_business, get_user_primary_business
 from app.db.base import Business, Order
 from app.payments.schemas import (
     PaymentCreate, PaymentRead,
@@ -18,7 +20,8 @@ from app.payments.reconciliation import (
     reconcile_mobile_payment,
     get_supported_gateways
 )
-from app.payments.detection import find_business_by_number, record_detection
+from app.payments.detection import find_owned_business_by_number, record_detection
+from app.webhooks.dispatcher import dispatch_event
 
 router = APIRouter(prefix="/businesses/{business_id}/orders/{order_id}/payments", tags=["Payments"])
 
@@ -28,13 +31,29 @@ def record_payment_endpoint(
     business_id: int,
     order_id: int,
     payment_data: PaymentCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_business: Business = Depends(get_current_business)
 ):
     try:
-        return service.record_payment(db, business_id, order_id, payment_data)
+        payment = service.record_payment(db, business_id, order_id, payment_data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    background_tasks.add_task(
+        dispatch_event,
+        business_id,
+        "payment.recorded",
+        {
+            "payment_id": payment.id,
+            "order_id": order_id,
+            "amount": str(payment.amount),
+            "method": payment.method,
+            "transaction_id": payment.transaction_id,
+            "status": payment.status.value if hasattr(payment.status, "value") else str(payment.status),
+        },
+    )
+    return payment
 
 
 # ==================== GLOBAL ENDPOINTS ====================
@@ -195,9 +214,11 @@ def reconcile_single_order(
     local_total = sum(p.amount for p in local_payments)
     gateway_total = sum(Decimal(str(tx.get('amount', 0))) for tx in gateway_transactions)
     
-    # Check if amounts match
-    if abs(Decimal(str(local_total)) - gateway_total) > Decimal("0.01"):
-        # Update payment statuses to verified
+    # FIXED (was inverted): pending payments are marked verified when the
+    # totals MATCH. The previous condition marked them verified on a mismatch,
+    # which is the opposite of the endpoint's purpose.
+    totals_match = abs(Decimal(str(local_total)) - gateway_total) <= Decimal("0.01")
+    if totals_match:
         for payment in local_payments:
             if payment.status == PaymentStatus.PENDING:
                 payment.status = PaymentStatus.VERIFIED
@@ -209,7 +230,7 @@ def reconcile_single_order(
         "gateway_total": float(gateway_total),
         "local_payments_count": len(local_payments),
         "gateway_transactions_count": len(gateway_transactions),
-        "reconciled": abs(Decimal(str(local_total)) - gateway_total) <= Decimal("0.01")
+        "reconciled": totals_match
     }
 
 
@@ -253,37 +274,46 @@ detect_router = APIRouter(prefix="/payments", tags=["Payment Detection"])
 
 @detect_router.post("/detect", response_model=DetectionResponse)
 def detect_incoming_payment(
-    request: DetectionRequest,
-    db: Session = Depends(get_db)
+    detection_request: DetectionRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+    current_business: Business = Depends(get_user_primary_business),
 ):
     """
-    Ingest an incoming provider payment (bKash / Nagad / Rocket / Upay ...).
+    DEVELOPMENT-ONLY payment simulator.
 
-    The business is identified by the connected receiving number. If an order
-    with the exact amount exists (and is not already paid), the payment is
-    recorded automatically and linked to that order.
+    This endpoint used to be anonymous production ingest: anyone who knew a
+    seller's receiving number could create a `verified` payment against that
+    seller's order. It is now unavailable in production (404), requires a JWT,
+    is rate limited, and the receiving number must belong to the CALLER'S OWN
+    business. Real payment detection happens through the device bridge and the
+    payment-intelligence engine.
     """
-    business = find_business_by_number(db, request.receiver_number)
-    if not business:
+    if settings.is_production:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
+    check_rate_limit(db, f"business:{current_business.id}", "dev-detect", 30, 60)
+
+    if not find_owned_business_by_number(db, current_business, detection_request.receiver_number):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No business is connected to this receiving number",
+            detail="No payment account for this receiving number on your business",
         )
 
     detection = record_detection(
         db=db,
-        business_id=business.id,
-        amount=request.amount,
-        method=request.method,
-        sender_number=request.sender_number,
-        receiver_number=request.receiver_number,
-        transaction_id=request.transaction_id,
-        paid_at=request.paid_at,
+        business_id=current_business.id,
+        amount=detection_request.amount,
+        method=detection_request.method,
+        sender_number=detection_request.sender_number,
+        receiver_number=detection_request.receiver_number,
+        transaction_id=detection_request.transaction_id,
+        paid_at=detection_request.paid_at,
     )
 
     return DetectionResponse(
         detection_id=detection.id,
-        business_id=business.id,
+        business_id=current_business.id,
         matched=detection.matched,
         order_id=detection.order_id,
         payment_id=detection.payment_id,

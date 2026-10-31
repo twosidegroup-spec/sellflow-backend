@@ -8,14 +8,17 @@ from app.deliveries.models import DeliveryStatus
 from app.analytics.schemas import DashboardSummary, DailyPoint
 
 def get_dashboard_summary(db: Session, business_id: int) -> DashboardSummary:
-    # 1. Calculate Total Revenue and Total Profit from Orders
-    # We use COALESCE to return 0 if there are no orders yet
+    # 1. Calculate Total Revenue and Total Profit from Orders.
+    # Cancelled orders are excluded: counting them as revenue overstates the
+    # seller's takings. (Previously included; corrected during the migration.)
     revenue_result = db.query(func.coalesce(func.sum(Order.total_amount), 0)).filter(
-        Order.business_id == business_id
+        Order.business_id == business_id,
+        Order.status != OrderStatus.CANCELLED,
     ).scalar()
     
     profit_result = db.query(func.coalesce(func.sum(Order.gross_profit), 0)).filter(
-        Order.business_id == business_id
+        Order.business_id == business_id,
+        Order.status != OrderStatus.CANCELLED,
     ).scalar()
     
     # 2. Calculate Total Orders

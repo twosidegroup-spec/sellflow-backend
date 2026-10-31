@@ -59,3 +59,36 @@ class DetectedPayment(Base):
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PaymentAccount(Base):
+    """The receiving account a business connects for a provider.
+
+    Migrated from System A's `payment_accounts` table. The account's receiving
+    number is what the device bridge reports and what detection matches
+    against; every row is owned by exactly one business.
+    """
+
+    __tablename__ = "payment_accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    receiving_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="configured")
+    mode: Mapped[str] = mapped_column(String(16), nullable=False, default="live")
+    connected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "business_id", "provider", "receiving_number",
+            name="uq_payment_account_business_provider_number",
+        ),
+    )

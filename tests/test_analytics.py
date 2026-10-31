@@ -68,13 +68,14 @@ def test_dashboard_summary_calculations():
     assert response.status_code == 200
     data = response.json()
     
-    # Total Revenue: 100 + 250 + 50 = 400
-    assert float(data["total_revenue"]) == 400.00
+    # MIGRATION CHANGE: cancelled orders are excluded from revenue/profit.
+    # Total Revenue: 100 + 250 = 350 (cancelled 50 excluded)
+    assert float(data["total_revenue"]) == 350.00
     
-    # Total Profit: 40 + 100 + (-10) = 130
-    assert float(data["total_profit"]) == 130.00
+    # Total Profit: 40 + 100 = 140 (cancelled -10 excluded)
+    assert float(data["total_profit"]) == 140.00
     
-    # Total Orders: 3
+    # Total Orders: 3 (counts still include the cancelled order)
     assert data["total_orders"] == 3
     
     # Pending Deliveries: 1

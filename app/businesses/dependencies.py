@@ -34,3 +34,33 @@ def get_current_business(
         )
     
     return business
+
+
+def get_user_primary_business(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Business:
+    """The requesting user's first business (lowest id).
+
+    Used by dev-only tooling (the payment simulator) where the client does not
+    send a business id. Production routes always take an explicit
+    `business_id` through `get_current_business`.
+    """
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == current_user.id)
+        .order_by(Membership.business_id.asc())
+        .first()
+    )
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to any business"
+        )
+    business = db.query(Business).filter(Business.id == membership.business_id).first()
+    if business is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Business not found"
+        )
+    return business
