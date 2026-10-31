@@ -16,7 +16,12 @@ router = APIRouter(prefix="/businesses/{business_id}/products", tags=["Products"
 UPLOAD_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads"
 )
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    # Serverless platforms (e.g. Vercel) have a read-only bundle filesystem.
+    # Uploads then fail at request time with a clear 500; the app still boots.
+    pass
 
 
 def _safe_upload_name(original: str | None) -> str:

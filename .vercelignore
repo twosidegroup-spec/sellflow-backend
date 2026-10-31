@@ -1,0 +1,40 @@
+# Files excluded from the Vercel deployment bundle.
+# The console (webapp/), the API (app/), fonts/logos (assets/) and the
+# uploads placeholder are included via vercel.json includeFiles.
+
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.database_notes.txt
+
+# Tests and scripts are not needed at runtime
+tests/
+scripts/
+
+# Flutter client sources (the web console is served from webapp/)
+.dart_tool/
+lib/
+test/
+android/
+ios/
+build/
+pubspec.yaml
+pubspec.lock
+analysis_options.yaml
+*.iml
+.metadata
+.flutter-plugins-dependencies
+
+# Tooling / docs / local artefacts
+nssm.exe
+nssm.zip
+install_service.bat
+start_server.bat
+*.apk
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg
+!uploads/.gitkeep

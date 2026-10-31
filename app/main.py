@@ -110,6 +110,16 @@ if _UPLOADS_DIR.is_dir():
     app.mount("/uploads", StaticFiles(directory=_UPLOADS_DIR), name="uploads")
 
 
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    """The bare hostname opens the web console.
+
+    API clients use `/api/v1/*`; health probes use `/health`; everything else
+    that asks for the root in a browser lands on the operations console.
+    """
+    return RedirectResponse(url="/app/")
+
+
 @app.get("/console", include_in_schema=False)
 async def console_redirect():
     """Convenience redirect to the web console."""
