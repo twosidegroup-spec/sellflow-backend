@@ -42,3 +42,6 @@ htmlcov/
 .flutter-plugins
 .flutter-plugins-dependencies
 *.iml
+
+.vercel
+.env*
