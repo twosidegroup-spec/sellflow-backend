@@ -235,7 +235,10 @@ export function recordedPaymentBadge(status) {
 
 export function eventBadge(event) {
   const verification = event.verification_status;
-  if (verification === "verified") return `<span class="badge badge--ok">Verified</span>`;
+  // "verified" here is the engine's PAID state: the event was parsed and
+  // matched to an order. It is not a claim of provider attestation, so the
+  // visible label stays factual.
+  if (verification === "verified") return `<span class="badge badge--ok">Matched</span>`;
   if (verification === "duplicate") return `<span class="badge badge--slate">Duplicate</span>`;
   if (verification === "rejected") return `<span class="badge badge--danger">Rejected</span>`;
   if (verification === "refunded") return `<span class="badge badge--info">Refunded</span>`;

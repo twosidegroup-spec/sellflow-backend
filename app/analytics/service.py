@@ -7,7 +7,12 @@ from app.orders.models import OrderStatus
 from app.deliveries.models import DeliveryStatus
 from app.analytics.schemas import DashboardSummary, DailyPoint
 
-def get_dashboard_summary(db: Session, business_id: int) -> DashboardSummary:
+def get_dashboard_summary(db: Session, business_id: int, days: int = 7) -> DashboardSummary:
+    """Dashboard summary for one business.
+
+    `days` controls the length of the daily series (default 7, the original
+    behaviour). Lifetime totals are unaffected.
+    """
     # 1. Calculate Total Revenue and Total Profit from Orders.
     # Cancelled orders are excluded: counting them as revenue overstates the
     # seller's takings. (Previously included; corrected during the migration.)
@@ -44,22 +49,22 @@ def get_dashboard_summary(db: Session, business_id: int) -> DashboardSummary:
         Delivery.status.in_([DeliveryStatus.PENDING, DeliveryStatus.IN_TRANSIT])
     ).scalar()
 
-    # 5. Today's numbers + last 7 local days (oldest first)
+    # 5. Today's numbers + the requested window (oldest first)
     local_now = datetime.now().astimezone()
     local_tz = local_now.tzinfo
     local_today = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = local_today - timedelta(days=6)
+    window_start = local_today - timedelta(days=days - 1)
 
     recent_orders = db.query(
         Order.created_at, Order.total_amount, Order.gross_profit
     ).filter(
         Order.business_id == business_id,
-        Order.created_at >= week_start.astimezone(timezone.utc),
+        Order.created_at >= window_start.astimezone(timezone.utc),
     ).all()
 
     daily: list[DailyPoint] = []
-    for i in range(7):
-        day_start = week_start + timedelta(days=i)
+    for i in range(days):
+        day_start = window_start + timedelta(days=i)
         day_end = day_start + timedelta(days=1)
         day_revenue = Decimal("0")
         day_profit = Decimal("0")

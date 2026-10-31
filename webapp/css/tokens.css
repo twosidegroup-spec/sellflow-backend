@@ -1,0 +1,142 @@
+/* ============================================================================
+   SellFlow — shared design tokens
+   ----------------------------------------------------------------------------
+   Imported by both the seller console (css/app.css) and the public marketing
+   site (site/site.css). Change a token here, and both surfaces follow.
+   Sections: brand · neutrals (light/dark) · status · type · space · radius ·
+   elevation · layout.
+   ========================================================================== */
+
+:root {
+  /* Brand */
+  --navy-950: #071021;
+  --navy-900: #0B1628;
+  --navy-800: #0F2039;
+  --navy-700: #16304F;
+
+  --teal-500: #16C2AF;
+  --teal-600: #0E988C;
+  --teal-700: #0B7E74;
+  --teal-ink: #067A6F;
+  --teal-soft: rgba(14, 152, 140, 0.10);
+  --teal-softer: rgba(14, 152, 140, 0.06);
+  --grad-teal: linear-gradient(135deg, #18C6B3 0%, #0E8F84 100%);
+  --grad-navy: linear-gradient(158deg, #0B1628 0%, #102542 52%, #0F3D56 100%);
+
+  /* Neutrals (light) */
+  --bg: #F4F6FB;
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFD;
+  --surface-3: #F0F4FA;
+  --line: #E4E9F2;
+  --line-strong: #CFD8E6;
+  --ink: #0E1B2E;
+  --text: #27364F;
+  --text-2: #5B6B84;
+  --text-3: #667791;
+  --overlay: rgba(11, 22, 40, 0.44);
+
+  /* Status */
+  --ok: #0B7E74;
+  --ok-bg: rgba(14, 152, 140, 0.12);
+  --warn: #99670B;
+  --warn-bg: rgba(217, 155, 30, 0.14);
+  --danger: #C42845;
+  --danger-bg: rgba(196, 40, 69, 0.10);
+  --info: #1D4ED8;
+  --info-bg: rgba(37, 99, 235, 0.10);
+  --violet: #6D28D9;
+  --violet-bg: rgba(109, 40, 217, 0.10);
+  --slate: #475569;
+  --slate-bg: rgba(71, 85, 105, 0.12);
+
+  /* Type */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Manrope", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-11: 0.6875rem;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-15: 0.9375rem;
+  --fs-16: 1rem;
+  --fs-17: 1.0625rem;
+  --fs-18: 1.125rem;
+  --fs-20: 1.25rem;
+  --fs-23: 1.4375rem;
+  --fs-26: 1.625rem;
+  --fs-32: 2rem;
+  --fs-40: 2.5rem;
+
+  /* Space */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+  --sp-10: 64px;
+
+  /* Radius */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(14, 27, 46, 0.05);
+  --shadow-2: 0 1px 2px rgba(14, 27, 46, 0.05), 0 10px 28px -14px rgba(14, 27, 46, 0.18);
+  --shadow-3: 0 18px 48px -18px rgba(14, 27, 46, 0.32);
+  --ring: 0 0 0 3px rgba(14, 152, 140, 0.24);
+  --ring-danger: 0 0 0 3px rgba(196, 40, 69, 0.18);
+
+  /* Layout */
+  --sidebar-w: 264px;
+  --rail-w: 76px;
+  --topbar-h: 64px;
+  --content-max: 1200px;
+  --bottom-nav-h: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+[data-theme="dark"] {
+  --bg: #070D18;
+  --surface: #0D1626;
+  --surface-2: #101B2E;
+  --surface-3: #152238;
+  --line: #1D2C46;
+  --line-strong: #2B3E5E;
+  --ink: #EAF1FB;
+  --text: #C4D0E3;
+  --text-2: #94A4BD;
+  --text-3: #7E8FA8;
+  --overlay: rgba(3, 8, 16, 0.62);
+
+  --teal-500: #2ED3C0;
+  --teal-600: #35D6C4;
+  --teal-700: #6BE4D6;
+  --teal-ink: #7CE7DA;
+  --teal-soft: rgba(46, 211, 192, 0.14);
+  --teal-softer: rgba(46, 211, 192, 0.08);
+
+  --ok: #4CD8C7;
+  --ok-bg: rgba(46, 211, 192, 0.15);
+  --warn: #E8B44A;
+  --warn-bg: rgba(217, 155, 30, 0.16);
+  --danger: #F4718C;
+  --danger-bg: rgba(244, 113, 140, 0.14);
+  --info: #7DA6FF;
+  --info-bg: rgba(125, 166, 255, 0.14);
+  --violet: #B79CFF;
+  --violet-bg: rgba(183, 156, 255, 0.14);
+  --slate: #A5B4CB;
+  --slate-bg: rgba(165, 180, 203, 0.14);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.7);
+  --shadow-3: 0 20px 52px -20px rgba(0, 0, 0, 0.8);
+  --ring: 0 0 0 3px rgba(46, 211, 192, 0.28);
+}

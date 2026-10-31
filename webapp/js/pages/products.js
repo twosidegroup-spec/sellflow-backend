@@ -18,16 +18,27 @@ import {
   toast,
 } from "../ui.js";
 
-let state = { products: [], search: "" };
+let state = { products: [], search: "", showArchived: false, sort: "name" };
+
+const SORTS = {
+  name: "Name A–Z",
+  price_desc: "Price high → low",
+  price_asc: "Price low → high",
+  stock_asc: "Stock low → high",
+};
 
 export async function render(root, ctx) {
   root.innerHTML = `
     <div class="toolbar">
       <div class="input-group grow" style="min-width:min(300px,100%)">
         ${icon("search", 16)}
-        <input class="input" id="product-search" aria-label="Search products" placeholder="Search by name or SKU…">
+        <input class="input" id="product-search" aria-label="Search products" placeholder="Search by name or SKU…" value="${esc(state.search)}">
       </div>
       <div class="row-tight">
+        <select class="select" id="product-sort" aria-label="Sort products" style="width:auto">
+          ${Object.entries(SORTS).map(([value, label]) => `<option value="${value}" ${state.sort === value ? "selected" : ""}>${esc(label)}</option>`).join("")}
+        </select>
+        <button class="chip ${state.showArchived ? "is-active" : ""}" id="archived-toggle" type="button">Archived</button>
         <button class="btn js-refresh">${icon("refresh", 15)} Refresh</button>
         <button class="btn btn--primary js-new-product">${icon("plus", 16)} New product</button>
       </div>
@@ -40,18 +51,38 @@ export async function render(root, ctx) {
     state.search = event.target.value.trim().toLowerCase();
     paint(root, ctx);
   });
+  qs("#product-sort", root).addEventListener("change", (event) => {
+    state.sort = event.target.value;
+    paint(root, ctx);
+  });
+  qs("#archived-toggle", root).addEventListener("click", () => {
+    state.showArchived = !state.showArchived;
+    qs("#archived-toggle", root).classList.toggle("is-active", state.showArchived);
+    paint(root, ctx);
+  });
 
   state.products = await api.products(ctx.businessId);
   paint(root, ctx);
 }
 
 function filtered() {
-  if (!state.search) return state.products;
-  return state.products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(state.search) ||
-      (product.sku || "").toLowerCase().includes(state.search)
-  );
+  let rows = state.products;
+  if (!state.showArchived) {
+    rows = rows.filter((product) => (product.status || "active") !== "inactive");
+  }
+  if (state.search) {
+    rows = rows.filter(
+      (product) =>
+        product.name.toLowerCase().includes(state.search) ||
+        (product.sku || "").toLowerCase().includes(state.search)
+    );
+  }
+  const sorted = [...rows];
+  if (state.sort === "price_desc") sorted.sort((a, b) => Number(b.selling_price) - Number(a.selling_price));
+  else if (state.sort === "price_asc") sorted.sort((a, b) => Number(a.selling_price) - Number(b.selling_price));
+  else if (state.sort === "stock_asc") sorted.sort((a, b) => Number(a.stock_quantity) - Number(b.stock_quantity));
+  else sorted.sort((a, b) => a.name.localeCompare(b.name));
+  return sorted;
 }
 
 function paint(root, ctx) {
@@ -68,7 +99,13 @@ function paint(root, ctx) {
     return;
   }
   if (!rows.length) {
-    host.innerHTML = emptyState({ iconName: "search", title: "No matching products", message: "Try a different search term." });
+    host.innerHTML = emptyState({
+      iconName: "search",
+      title: state.showArchived ? "No matching products" : "No active products",
+      message: state.showArchived
+        ? "Try a different search term."
+        : "Archived products are hidden — toggle “Archived” to see them.",
+    });
     return;
   }
 
@@ -85,13 +122,14 @@ function paint(root, ctx) {
               const cost = Number(product.cost_price);
               const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
               const stock = Number(product.stock_quantity);
+              const archived = (product.status || "active") === "inactive";
               return `
-              <tr data-id="${product.id}">
+              <tr data-id="${product.id}" ${archived ? 'style="opacity:.62"' : ""}>
                 <td class="cell-lead" data-label="Product">
                   <div class="prod-name">
                     <span class="thumb">${product.image_url ? `<img src="${esc(product.image_url)}" alt="">` : icon("image", 15)}</span>
                     <div class="truncate">
-                      <div class="cell-title truncate">${esc(product.name)}</div>
+                      <div class="cell-title truncate">${esc(product.name)} ${archived ? `<span class="reason-tag">Archived</span>` : ""}</div>
                       <div class="cell-sub mono">${esc(product.sku)}</div>
                     </div>
                   </div>
@@ -100,15 +138,20 @@ function paint(root, ctx) {
                 <td class="num" data-label="Cost">${esc(fmt.money(cost, { decimals: true }))}</td>
                 <td class="num" data-label="Margin">${margin.toFixed(1)}%</td>
                 <td class="num" data-label="Stock">${
-                  stock === 0
-                    ? `<span class="stock-out">Out of stock</span>`
-                    : stock <= 5
-                      ? `<span class="stock-low">${stock} left</span>`
-                      : fmt.num(stock)
+                  archived
+                    ? `<span class="dim">—</span>`
+                    : stock === 0
+                      ? `<span class="stock-out">Out of stock</span>`
+                      : stock <= 5
+                        ? `<span class="stock-low">${stock} left</span>`
+                        : fmt.num(stock)
                 }</td>
                 <td data-label="Actions">
                   <div class="row-actions">
                     <button class="icon-btn js-edit" aria-label="Edit ${esc(product.name)}">${icon("edit", 15)}</button>
+                    <button class="icon-btn js-archive" title="${archived ? "Restore product" : "Archive product"}" aria-label="${archived ? "Restore" : "Archive"} ${esc(product.name)}">
+                      ${archived ? icon("refresh", 15) : icon("inbox", 15)}
+                    </button>
                     <button class="icon-btn js-delete" aria-label="Delete ${esc(product.name)}">${icon("trash", 15)}</button>
                   </div>
                 </td>
@@ -122,6 +165,30 @@ function paint(root, ctx) {
   on(host, "click", ".js-edit", (event, target) => {
     const id = Number(target.closest("tr").dataset.id);
     openProductForm(root, ctx, state.products.find((product) => product.id === id));
+  });
+  on(host, "click", ".js-archive", async (event, target) => {
+    const id = Number(target.closest("tr").dataset.id);
+    const product = state.products.find((item) => item.id === id);
+    const archived = (product.status || "active") === "inactive";
+    const confirmed = await confirmDialog({
+      title: archived ? "Restore product?" : "Archive product?",
+      message: archived
+        ? `“${product.name}” will be available for new orders again.`
+        : `“${product.name}” stays in your catalogue with its history, but cannot be added to new orders. You can restore it later.`,
+      confirmText: archived ? "Restore" : "Archive",
+      danger: false,
+    });
+    if (!confirmed) return;
+    try {
+      const updated = await api.updateProduct(ctx.businessId, id, {
+        status: archived ? "active" : "inactive",
+      });
+      state.products = state.products.map((item) => (item.id === id ? { ...item, ...updated } : item));
+      toast(archived ? "Product restored" : "Product archived");
+      paint(root, ctx);
+    } catch (error) {
+      toast(error.message || "Could not update the product", { type: "error" });
+    }
   });
   on(host, "click", ".js-delete", async (event, target) => {
     const id = Number(target.closest("tr").dataset.id);

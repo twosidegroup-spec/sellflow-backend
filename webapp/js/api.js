@@ -125,8 +125,8 @@ export const api = {
   },
 
   /* ---------------------------------------------------------- analytics */
-  summary(businessId) {
-    return this.get(`/businesses/${businessId}/analytics/summary`);
+  summary(businessId, params = {}) {
+    return this.get(`/businesses/${businessId}/analytics/summary`, params);
   },
 
   /* ----------------------------------------------------------- products */
@@ -161,8 +161,8 @@ export const api = {
   },
 
   /* ------------------------------------------------------------- orders */
-  orders(businessId) {
-    return this.get(`/businesses/${businessId}/orders/`);
+  orders(businessId, params = {}) {
+    return this.get(`/businesses/${businessId}/orders/`, params);
   },
   createOrder(businessId, payload) {
     return this.post(`/businesses/${businessId}/orders/`, payload);
@@ -172,6 +172,17 @@ export const api = {
   },
   setOrderStatus(businessId, orderId, status) {
     return this.patch(`/businesses/${businessId}/orders/${orderId}/status`, { status });
+  },
+
+  /* ---------------------------------------------------------- deliveries */
+  delivery(businessId, orderId) {
+    return this.get(`/businesses/${businessId}/orders/${orderId}/delivery/`);
+  },
+  createDelivery(businessId, orderId, payload) {
+    return this.post(`/businesses/${businessId}/orders/${orderId}/delivery/`, payload);
+  },
+  updateDelivery(businessId, orderId, payload) {
+    return this.patch(`/businesses/${businessId}/orders/${orderId}/delivery/`, payload);
   },
 
   /* ----------------------------------------------------------- payments */

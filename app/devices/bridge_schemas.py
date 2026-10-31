@@ -56,3 +56,4 @@ class PaymentAccountConnectRequest(BaseModel):
 
     provider: str = Field(min_length=1, max_length=32)
     receiving_number: str = Field(min_length=3, max_length=50)
+    account_type: str = Field(default="personal", pattern=r"^(personal|merchant)$")

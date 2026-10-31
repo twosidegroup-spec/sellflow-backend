@@ -17,6 +17,7 @@ class OrderCreate(BaseModel):
     delivery_fee: Decimal = Field(ge=0, decimal_places=2, default=Decimal("0.00"))
     discount: Decimal = Field(ge=0, decimal_places=2, default=Decimal("0.00"))
     notes: str | None = Field(default=None, max_length=1000)
+    is_cod: bool = False
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
@@ -48,6 +49,7 @@ class OrderRead(BaseModel):
     status: OrderStatus
     payment_status: str = "pending"
     payment_method: str | None = None
+    is_cod: bool = False
     total_amount: Decimal
     total_cost: Decimal
     gross_profit: Decimal

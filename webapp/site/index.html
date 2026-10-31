@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0B1628">
+  <title>SellFlow — Run your social commerce like a real business</title>
+  <meta name="description" content="SellFlow gives Bangladesh's social sellers one calm workspace for orders, inventory, customers and bKash/Nagad payment reconciliation — on desktop and mobile.">
+  <link rel="canonical" href="https://sellflow-site.vercel.app/">
+  <meta property="og:title" content="SellFlow — Social commerce operations, settled.">
+  <meta property="og:description" content="Orders, inventory, customers and payment reconciliation for social sellers in Bangladesh.">
+  <meta property="og:type" content="website">
+
+  <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/site.css">
+  <script>
+    // Apply the stored/console theme (or the system preference) before first paint.
+    try {
+      var stored = localStorage.getItem("sf.theme");
+      var dark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      if (dark) document.documentElement.dataset.theme = "dark";
+    } catch (e) {}
+  </script>
+  <script src="/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="nav" id="top">
+    <div class="nav__inner">
+      <a class="nav__brand" href="/" aria-label="SellFlow home">
+        <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+          <defs><linearGradient id="nm" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#18C6B4"/><stop offset="1" stop-color="#0E8F84"/>
+          </linearGradient></defs>
+          <rect width="32" height="32" rx="9" fill="url(#nm)"/>
+          <path d="M10 21c0-3.2 2.6-4.4 6-5s6-1.4 6-4.4C22 9.2 19.4 8 16 8s-6 1.2-6 3.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M22 11c0 3.2-2.6 4.4-6 5s-6 1.4-6 4.4C10 22.8 12.6 24 16 24s6-1.2 6-3.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>
+        </svg>
+        <span>SellFlow</span>
+      </a>
+
+      <nav class="nav__links" id="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#payments">Payments</a>
+        <a href="#security">Security</a>
+        <a href="#mobile">Mobile</a>
+        <a class="nav__mobile-cta" href="/app/#/login">Sign in</a>
+        <a class="nav__mobile-cta btn btn--primary btn--sm" href="/app/#/register">Create account</a>
+      </nav>
+
+      <div class="nav__actions">
+        <button class="btn btn--sm js-install hidden" id="install-btn" type="button">Install app</button>
+        <a class="btn btn--ghost btn--sm nav__signin" href="/app/#/login">Sign in</a>
+        <a class="btn btn--primary btn--sm" href="/app/#/register">Create account</a>
+        <button class="nav__burger iconbtn" id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="wrap hero__grid">
+        <div class="hero__copy">
+          <span class="eyebrow">Built for Bangladesh's social sellers</span>
+          <h1>Run your social commerce like a <span class="accent">real business</span>.</h1>
+          <p class="lede">
+            One calm workspace for the way you already sell — orders, stock, customers and
+            bKash-style payment reconciliation, instead of six notebooks and three chat threads.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--primary btn--lg" href="/app/#/register">Create your business account</a>
+            <a class="btn btn--lg" href="/app/#">Explore the dashboard</a>
+          </div>
+          <ul class="hero__trust">
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Business data isolated per account, enforced and tested</li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Works on desktop, tablet and phone</li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Payment reconciliation with an honest review queue</li>
+          </ul>
+        </div>
+
+        <div class="hero__panel" aria-hidden="true">
+          <div class="ui">
+            <div class="ui__side">
+              <div class="ui__brand"><span class="ui__dot"></span> SellFlow</div>
+              <div class="ui__navitem is-active">Home</div>
+              <div class="ui__navitem">Orders</div>
+              <div class="ui__navitem">Products</div>
+              <div class="ui__navitem">Customers</div>
+              <div class="ui__navitem">Payments</div>
+              <div class="ui__navitem">Settings</div>
+            </div>
+            <div class="ui__body">
+              <div class="ui__row">
+                <div class="ui__card ui__card--hero"><span class="ui__k">Verified payments</span><span class="ui__spark"></span></div>
+                <div class="ui__card"><span class="ui__k">Orders</span><span class="ui__bars"><i style="height:32%"></i><i style="height:58%"></i><i style="height:44%"></i><i style="height:76%"></i><i style="height:62%"></i></span></div>
+                <div class="ui__card"><span class="ui__k">Stock</span><span class="ui__bars ui__bars--soft"><i style="height:40%"></i><i style="height:66%"></i><i style="height:52%"></i><i style="height:30%"></i><i style="height:48%"></i></span></div>
+              </div>
+              <div class="ui__row ui__row--list">
+                <div class="ui__list">
+                  <div class="ui__line"><span class="ui__avatar"></span><span class="ui__lt"></span><span class="badge badge--ok">Verified</span></div>
+                  <div class="ui__line"><span class="ui__avatar"></span><span class="ui__lt"></span><span class="badge badge--warn">Review</span></div>
+                  <div class="ui__line"><span class="ui__avatar"></span><span class="ui__lt"></span><span class="badge badge--violet">Partial</span></div>
+                  <div class="ui__line"><span class="ui__avatar"></span><span class="ui__lt"></span><span class="badge badge--slate">Duplicate</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Providers -->
+    <section class="strip">
+      <div class="wrap strip__inner">
+        <span class="strip__label">Built around the providers you actually use</span>
+        <div class="strip__logos">
+          <img src="/assets/images/bkash.svg" alt="bKash" height="26">
+          <img src="/assets/images/nagad.svg" alt="Nagad" height="26">
+          <span class="chip-provider">Rocket</span>
+          <span class="chip-provider">Upay</span>
+          <span class="chip-provider">Cash on delivery</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <header class="section__head">
+          <span class="eyebrow">Everything in one place</span>
+          <h2>Your business, organised the way you work</h2>
+          <p class="section__lede">Each screen maps to a job you do every day — nothing decorative, nothing that writes cheques your data can't cash.</p>
+        </header>
+
+        <div class="grid grid--3">
+          <article class="card feature">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.4-1.6L13.2 21l-2.4-1.6L8.4 21 6 19.4V3z"/><path d="M9.5 8.5h5M9.5 12h5"/></svg>
+            </span>
+            <h3>Orders pipeline</h3>
+            <p>Search, filter and move every order through New → Confirmed → Shipped → Delivered. Each order carries its customer, items, discounts and delivery fee, with totals calculated on the server.</p>
+          </article>
+
+          <article class="card feature">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+            </span>
+            <h3>Inventory &amp; pricing</h3>
+            <p>Track cost and selling price, watch low stock before you oversell, and archive products you no longer sell. New orders always use the products you actually have.</p>
+          </article>
+
+          <article class="card feature">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            <h3>Customer records</h3>
+            <p>Names, phone numbers and delivery addresses with each customer's order history and purchase totals. Phone numbers power payment matching.</p>
+          </article>
+
+          <article class="card feature" id="payments">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H5a2 2 0 0 1-2-2 2 2 0 0 1 2-2h13v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-6"/><path d="M16 13h.01"/></svg>
+            </span>
+            <h3>Payment reconciliation</h3>
+            <p>Incoming bKash-style notifications are parsed into transactions and matched to orders by amount, customer phone and timing — with duplicate and replay protection built on database constraints.</p>
+          </article>
+
+          <article class="card feature">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.3L18.7 9H14v8h3"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/></svg>
+            </span>
+            <h3>Delivery &amp; COD</h3>
+            <p>Mark orders as cash-on-delivery or prepaid, add courier name and tracking reference, and follow each parcel's status through pickup, transit and delivery.</p>
+          </article>
+
+          <article class="card feature" id="security">
+            <span class="feature__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>
+            <h3>Security &amp; isolation</h3>
+            <p>Every business sees only its own data — enforced by the server on every request and covered by automated cross-account tests. Sensitive values are hashed, and production refuses to start misconfigured.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section section--tint" id="how">
+      <div class="wrap">
+        <header class="section__head">
+          <span class="eyebrow">How it works</span>
+          <h2>From register to reconciled in an afternoon</h2>
+        </header>
+        <ol class="steps">
+          <li class="step">
+            <span class="step__num">1</span>
+            <h3>Create your business account</h3>
+            <p>Sign up with your shop name and the number your customers already pay into.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">2</span>
+            <h3>Add products &amp; customers</h3>
+            <p>Build your catalogue with prices and stock, and save the people who buy from you.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">3</span>
+            <h3>Record orders as they come</h3>
+            <p>Chat order? Two taps: customer, items, delivery fee, and whether it's COD or prepaid.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">4</span>
+            <h3>Reconcile payments</h3>
+            <p>Matched transactions mark orders paid. Anything uncertain lands in a review queue instead of being guessed.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Payments honesty -->
+    <section class="section">
+      <div class="wrap grid grid--2 grid--middle">
+        <div>
+          <span class="eyebrow">Payments, without the hand-waving</span>
+          <h2>We tell you exactly what a payment status means</h2>
+          <p class="section__lede">
+            A notification appearing on a phone is evidence of a message — not proof that money arrived.
+            SellFlow keeps every stage separate so you always know what you're looking at:
+          </p>
+          <ul class="statuslist">
+            <li><b>Notification received</b> — an event reached your account (via the SellFlow bridge or manual entry).</li>
+            <li><b>Parsed</b> — amount, transaction ID and sender were extracted and validated.</li>
+            <li><b>Matched to an order</b> — the engine found a same-business order by amount, phone and timing.</li>
+            <li><b>Reconciled</b> — the transaction is recorded against the order with an audit trail.</li>
+            <li><b>Needs review</b> — nothing matched confidently. It waits for you; it is never auto-confirmed.</li>
+          </ul>
+          <p class="fineprint">
+            A typed transaction ID or a shared SMS is not independent proof of payment, and SellFlow never
+            presents it as one. For merchant-channel payments, SellFlow's architecture supports signed
+            provider webhooks where an official integration is in place.
+          </p>
+        </div>
+        <div class="card honesty">
+          <div class="honesty__row"><span class="badge badge--ok">Reconciled</span><span>Matched to an order and recorded</span></div>
+          <div class="honesty__row"><span class="badge badge--warn">Review</span><span>No confident match — asks a human</span></div>
+          <div class="honesty__row"><span class="badge badge--violet">Partial</span><span>Received less than the order total</span></div>
+          <div class="honesty__row"><span class="badge badge--slate">Duplicate</span><span>Replayed transaction, blocked by a unique constraint</span></div>
+          <div class="honesty__row"><span class="badge badge--danger">Never auto-“verified”</span><span>SMS events are not provider-attested money</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security -->
+    <section class="section section--tint">
+      <div class="wrap">
+        <header class="section__head">
+          <span class="eyebrow">Security &amp; privacy</span>
+          <h2>Controls that are actually implemented</h2>
+          <p class="section__lede">Listed only because they exist in the product today — each item maps to code and automated tests.</p>
+        </header>
+        <div class="grid grid--3">
+          <div class="card tiny"><h3>Business-level isolation</h3><p>Every request resolves your business from your credential; cross-business reads and writes are denied and covered by tests.</p></div>
+          <div class="card tiny"><h3>Hashed device credentials</h3><p>Pairing codes and device tokens are stored only as HMAC-SHA256 digests. Plaintext is shown once and never logged.</p></div>
+          <div class="card tiny"><h3>Replay &amp; duplicate protection</h3><p>Payment events are unique per business, provider and transaction ID at the database level.</p></div>
+          <div class="card tiny"><h3>No SMS bodies stored</h3><p>Only normalised payment fields are transmitted and stored — never the raw message text.</p></div>
+          <div class="card tiny"><h3>Fail-closed configuration</h3><p>Production refuses to start with missing or placeholder secrets; a wildcard CORS origin cannot be combined with credentials.</p></div>
+          <div class="card tiny"><h3>Rate-limited authentication</h3><p>Registration, sign-in, pairing and ingestion endpoints are rate-limited server-side.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mobile -->
+    <section class="section" id="mobile">
+      <div class="wrap">
+        <header class="section__head">
+          <span class="eyebrow">Mobile</span>
+          <h2>Your phone is the counter</h2>
+          <p class="section__lede">SellFlow runs as an installable web app on Android and iPhone today. Native apps and store listings are on the way.</p>
+        </header>
+        <div class="grid grid--2">
+          <article class="card mobilecard">
+            <div class="mobilecard__head">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>
+              <h3>Android</h3>
+              <span class="badge badge--warn">Coming soon</span>
+            </div>
+            <p>The SellFlow payment bridge — which reads bKash SMS on the seller's own device and forwards only normalised fields — is in controlled testing. A Google Play listing is not available yet.</p>
+            <button class="btn" type="button" disabled>Play Store — coming soon</button>
+            <p class="fineprint">Install the web app now: open this site in Chrome and choose “Add to Home screen”.</p>
+          </article>
+          <article class="card mobilecard">
+            <div class="mobilecard__head">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M11 18h2"/></svg>
+              <h3>iPhone &amp; iPad</h3>
+              <span class="badge badge--warn">Coming soon</span>
+            </div>
+            <p>iOS does not allow apps to read incoming SMS, so automatic SMS detection is impossible on iPhone by platform design. You can confirm payments manually today; a dedicated iOS app is planned.</p>
+            <button class="btn" type="button" disabled>App Store — coming soon</button>
+            <p class="fineprint">Install the web app now: open this site in Safari and choose Share → “Add to Home Screen”.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Early access / pricing -->
+    <section class="section">
+      <div class="wrap">
+        <div class="band">
+          <div>
+            <span class="eyebrow">Early access</span>
+            <h2>We're onboarding sellers before announcing pricing</h2>
+            <p>Pricing has not been announced yet. Early-access sellers work directly with the team while the platform is hardened — no invented tiers, no fake discounts.</p>
+          </div>
+          <a class="btn btn--primary btn--lg" href="/app/#/register">Request early access</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section section--tint">
+      <div class="wrap wrap--narrow">
+        <header class="section__head">
+          <span class="eyebrow">Questions</span>
+          <h2>Straight answers</h2>
+        </header>
+        <details class="faq"><summary>How does payment detection actually work?</summary>
+          <p>Two supported paths: an Android device paired to your business runs the SellFlow payment bridge, which parses recognised bKash-style payment messages and forwards only normalised fields (amount, transaction ID, sender) over an authenticated, rate-limited channel; or you record a payment manually from the order screen. Every event is deduplicated and matched to one of your orders — or placed in your review queue.</p>
+        </details>
+        <details class="faq"><summary>Does a “Reconciled” badge mean the provider confirmed the money?</summary>
+          <p>No — and we're careful about the words. It means SellFlow received an event, parsed it, matched it to an order in your business and recorded it with a full audit trail. Only an authorised provider integration (for example signed merchant webhooks) can attest that a payment is provider-verified, and SellFlow's architecture is built to support that where such an integration exists.</p>
+        </details>
+        <details class="faq"><summary>Can SellFlow read SMS on an iPhone?</summary>
+          <p>No. iOS does not expose the SMS inbox to apps, and the web platform cannot read arbitrary SMS on any phone. On iPhone you confirm payments manually; on Android the optional bridge app handles SMS detection.</p>
+        </details>
+        <details class="faq"><summary>Is my shop's data separate from other sellers?</summary>
+          <p>Yes. Every API request resolves your business from your credentials, and all business-owned resources (orders, products, customers, payments, analytics, settings) are scoped to it. Cross-business access is denied and verified by automated tests in the codebase.</p>
+        </details>
+        <details class="faq"><summary>What happens to a payment that doesn't match any order?</summary>
+          <p>It is stored as an unmatched event in your review queue — never guessed onto an order. You can point it at the right order manually, and duplicates or replays are blocked at the database level.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="section">
+      <div class="wrap">
+        <div class="cta">
+          <h2>Ready to run the whole shop from one screen?</h2>
+          <div class="cta__actions">
+            <a class="btn btn--primary btn--lg" href="/app/#/register">Create your business account</a>
+            <a class="btn btn--lg" href="/app/#/login">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__grid">
+      <div class="footer__brand">
+        <div class="footer__logo">
+          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="9" fill="url(#nm)"/>
+            <path d="M10 21c0-3.2 2.6-4.4 6-5s6-1.4 6-4.4C22 9.2 19.4 8 16 8s-6 1.2-6 3.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M22 11c0 3.2-2.6 4.4-6 5s-6 1.4-6 4.4C10 22.8 12.6 24 16 24s6-1.2 6-3.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>
+          </svg>
+          <b>SellFlow</b>
+        </div>
+        <p>Social commerce operations for sellers in Bangladesh. A Two Side Group product.</p>
+      </div>
+      <div class="footer__col">
+        <h2 class="footer__heading">Product</h2>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#payments">Payments</a>
+        <a href="#security">Security</a>
+      </div>
+      <div class="footer__col">
+        <h2 class="footer__heading">Sellers</h2>
+        <a href="/app/#/login">Sign in</a>
+        <a href="/app/#/register">Create account</a>
+        <a href="/app/">Open dashboard</a>
+        <a href="#mobile">Mobile apps</a>
+      </div>
+      <div class="footer__col">
+        <h2 class="footer__heading">Providers</h2>
+        <span>bKash</span>
+        <span>Nagad</span>
+        <span>Rocket</span>
+        <span>Upay</span>
+      </div>
+    </div>
+    <div class="wrap footer__bottom">
+      <span>© <span id="year">2026</span> Two Side Group · SellFlow</span>
+      <span>Made for sellers in Bangladesh</span>
+    </div>
+  </footer>
+</body>
+</html>

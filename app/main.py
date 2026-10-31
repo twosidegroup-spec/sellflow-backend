@@ -44,6 +44,12 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/console", include_in_schema=False)
+async def console_redirect():
+    """Convenience redirect to the seller console."""
+    return RedirectResponse(url="/app/")
+
+
 # --- API routers -------------------------------------------------------------
 
 from app.auth.router import router as auth_router
@@ -90,13 +96,15 @@ app.include_router(webhooks_router, prefix="/api/v1")
 app.include_router(device_bridge_router)
 app.include_router(payment_accounts_router)
 
-# --- Static assets: premium web console + shared mobile assets ----------------
+# --- Static assets: marketing site + premium web console ---------------------
 #
-# The web console is dependency-free static assets served by this app
-# (no build step). Files live in `webapp/`; the shared Inter font files and
-# provider logos live in the Flutter app's `assets/` directory.
+# Both surfaces are dependency-free static files served by this app (no build
+# step): `webapp/site/` is the public marketing site + PWA (manifest, service
+# worker) mounted at the ROOT, and `webapp/` is the seller console under /app.
+# Shared Inter fonts and provider logos come from the Flutter app's `assets/`.
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent
 _WEBAPP_DIR = _BACKEND_ROOT / "webapp"
+_SITE_DIR = _WEBAPP_DIR / "site"
 _ASSETS_DIR = _BACKEND_ROOT / "assets"
 _UPLOADS_DIR = _BACKEND_ROOT / "uploads"
 
@@ -109,19 +117,9 @@ if _ASSETS_DIR.is_dir():
 if _UPLOADS_DIR.is_dir():
     app.mount("/uploads", StaticFiles(directory=_UPLOADS_DIR), name="uploads")
 
-
-@app.get("/", include_in_schema=False)
-async def root_redirect():
-    """The bare hostname opens the web console.
-
-    API clients use `/api/v1/*`; health probes use `/health`; everything else
-    that asks for the root in a browser lands on the operations console.
-    """
-    return RedirectResponse(url="/app/")
-
-
-@app.get("/console", include_in_schema=False)
-async def console_redirect():
-    """Convenience redirect to the web console."""
-    return RedirectResponse(url="/app/")
+# The marketing site goes last so /app, /assets, /uploads, /api and the
+# routers above always win; everything else is served from `webapp/site/`
+# (index.html at `/`, plus /site.css, /sw.js, /manifest.webmanifest, icons).
+if _SITE_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_SITE_DIR, html=True), name="site")
 

@@ -28,9 +28,16 @@ from app.core.config import Settings, settings
 
 
 def test_legacy_public_write_endpoints_are_gone(client):
-    assert client.post("/api/orders", json={"total_amount": 1, "customer_name": "x"}).status_code == 404
-    assert client.post("/api/products", json={"name": "x"}).status_code == 404
-    assert client.post("/api/customers", json={"name": "x"}).status_code == 404
+    # The API no longer serves these routes. Non-GET requests fall through to
+    # the root static mount (marketing site), which answers 405 for an unknown
+    # POST path — either way, nothing is written and nothing is exposed.
+    for method, path, payload in (
+        ("POST", "/api/orders", {"total_amount": 1, "customer_name": "x"}),
+        ("POST", "/api/products", {"name": "x"}),
+        ("POST", "/api/customers", {"name": "x"}),
+    ):
+        response = client.request(method, path, json=payload)
+        assert response.status_code in (404, 405), (path, response.status_code)
 
 
 # ----------------------------------------------------------------- payment detect

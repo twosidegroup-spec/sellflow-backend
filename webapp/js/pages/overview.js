@@ -16,6 +16,9 @@ import {
 } from "../ui.js";
 import { areaChart, sparkline } from "../charts.js";
 
+const RANGE_OPTIONS = [7, 30, 90];
+let rangeDays = 7;
+
 export async function render(root, ctx) {
   root.innerHTML = `
     <div class="overview-kpis" id="kpis">${skeleton.kpis(4)}</div>
@@ -23,8 +26,12 @@ export async function render(root, ctx) {
     <div class="overview-grid">
       <div class="card">
         <div class="card__head">
-          <div><h2>Revenue</h2><div class="sub">Last 7 days, delivered and in-flight orders</div></div>
-          <div class="segmented" id="range-note"><button class="is-active" disabled>7 days</button></div>
+          <div><h2>Revenue</h2><div class="sub">Last ${rangeDays} days · non-cancelled orders</div></div>
+          <div class="segmented" id="range-control" role="group" aria-label="Date range">
+            ${RANGE_OPTIONS.map(
+              (days) => `<button type="button" data-days="${days}" class="${rangeDays === days ? "is-active" : ""}" aria-pressed="${rangeDays === days}">${days} days</button>`
+            ).join("")}
+          </div>
         </div>
         <div class="card__body"><div class="chart" id="revenue-chart">${skeleton.chart(210)}</div></div>
       </div>
@@ -50,8 +57,17 @@ export async function render(root, ctx) {
       </div>
     </div>`;
 
+  qs("#range-control", root).addEventListener("click", (event) => {
+    const button = event.target.closest("[data-days]");
+    if (!button) return;
+    const next = Number(button.dataset.days);
+    if (next === rangeDays) return;
+    rangeDays = next;
+    render(root, ctx);
+  });
+
   const [summary, intelligence, orders, events] = await Promise.all([
-    api.summary(ctx.businessId),
+    api.summary(ctx.businessId, { days: rangeDays }),
     api.intelligenceSummary(ctx.businessId),
     api.orders(ctx.businessId),
     api.intelligenceEvents(ctx.businessId, { limit: 6, sort: "newest" }),
@@ -90,7 +106,7 @@ function renderKpis(summary, intelligence, ctx) {
       foot: `<span>${fmt.num(summary.today_orders)} today</span>`,
     },
     {
-      label: "Verified payments",
+      label: "Matched payments",
       value: fmt.money(verifiedTotal),
       hero: true,
       foot: `<span>${fmt.num(intelligence.paid_events)} matched · ${fmt.num(intelligence.review_events)} to review</span>`,
@@ -127,7 +143,10 @@ function renderAttention(intelligence, root) {
 
 function renderChart(daily, root) {
   const points = (daily || []).map((point) => ({
-    label: new Date(`${point.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" }),
+    label:
+      (daily || []).length > 14
+        ? new Date(`${point.date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+        : new Date(`${point.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" }),
     value: Number(point.revenue),
   }));
   areaChart(qs("#revenue-chart", root), {

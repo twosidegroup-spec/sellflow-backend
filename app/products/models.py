@@ -26,7 +26,7 @@ class Product(Base):
     stock_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     status: Mapped[ProductStatus] = mapped_column(Enum(ProductStatus), default=ProductStatus.ACTIVE)
-    
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -37,6 +37,10 @@ class Product(Base):
     def image_url(self) -> str | None:
         """Primary image URL, exposed for API responses (e.g. ProductRead)."""
         return self.images[0].image_url if self.images else None
+
+    @property
+    def is_archived(self) -> bool:
+        return self.status == ProductStatus.INACTIVE
 
 
 class ProductImage(Base):

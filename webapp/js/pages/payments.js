@@ -117,7 +117,7 @@ async function loadTransactions(root, ctx) {
   const host = qs("#pmt-content", root);
   host.innerHTML = `
     <div class="grid grid-4" style="margin-top:2px">
-      ${statCard("Verified amount", fmt.money(summary.verified_amount_total), `${fmt.money(summary.verified_amount_today)} today`, "wallet")}
+      ${statCard("Matched amount", fmt.money(summary.verified_amount_total), `${fmt.money(summary.verified_amount_today)} today`, "wallet")}
       ${statCard("Matched payments", fmt.num(summary.paid_events), "Confidently linked to orders", "checkCircle")}
       ${statCard("Needs review", fmt.num(summary.review_events), "No confident order match", "alert")}
       ${statCard("Duplicates", fmt.num(summary.duplicate_events), "Replayed transactions blocked", "shield")}
@@ -133,7 +133,7 @@ async function loadTransactions(root, ctx) {
             ${selectOptions(
               ["", "verified", "review", "pending_verification", "partial", "duplicate"],
               state.status,
-              { "": "All statuses", verified: "Verified", review: "Needs review", pending_verification: "Pending", partial: "Partial", duplicate: "Duplicate" }
+              { "": "All statuses", verified: "Matched", review: "Needs review", pending_verification: "Pending", partial: "Partial", duplicate: "Duplicate" }
             )}
           </select>
           <select class="select" id="ev-provider" aria-label="Filter by provider" style="width:auto">
@@ -340,8 +340,9 @@ async function loadAccounts(root, ctx) {
                 <span class="provider-logo">${providerLogo(account.provider)}</span>
                 <div class="grow">
                   <div style="font-weight:600; color:var(--ink)">${esc(providerLabel(account.provider))} · <span class="mono">${esc(account.receiving_number)}</span></div>
-                  <div class="small dim">Connected ${esc(fmt.date(account.connected_at))}</div>
+                  <div class="small dim">${(account.account_type || "personal") === "merchant" ? "Merchant account" : "Personal number"} · connected ${esc(fmt.date(account.connected_at))}</div>
                 </div>
+                <span class="badge badge--${(account.account_type || "personal") === "merchant" ? "info" : "slate"}">${(account.account_type || "personal") === "merchant" ? "Merchant" : "Personal"}</span>
                 <span class="badge badge--ok">${esc(account.status)}</span>
                 <button class="copy-btn js-copy" data-copy="${esc(account.receiving_number)}" aria-label="Copy number">${icon("copy", 14)}</button>
               </div>`
@@ -366,6 +367,14 @@ async function loadAccounts(root, ctx) {
               <input class="input" id="acc-number" name="receiving_number" inputmode="tel" placeholder="01XXXXXXXXX">
               <span class="hint">Must be the number your customers actually pay into.</span>
             </div>
+            <div class="field">
+              <label for="acc-type">Account type</label>
+              <select class="select" id="acc-type" name="account_type">
+                <option value="personal">Personal number</option>
+                <option value="merchant">Merchant account</option>
+              </select>
+              <span class="hint">Personal numbers rely on SMS-bridge or manual events. Merchant accounts can use signed provider webhooks where an official integration exists.</span>
+            </div>
             <button class="btn btn--primary" type="submit">${icon("link", 15)} Connect account</button>
           </form>
           <div class="pill-note" style="margin-top:16px; align-items:flex-start">${icon("info", 14)}<span>The Android payment bridge reports SMS payments for the number connected here.</span></div>
@@ -389,6 +398,7 @@ async function loadAccounts(root, ctx) {
       await api.connectPaymentAccount(ctx.businessId, {
         provider: values.provider,
         receiving_number: values.receiving_number,
+        account_type: values.account_type || "personal",
       });
       toast("Payment account connected", { title: "Account saved" });
       await loadAccounts(root, ctx);

@@ -55,10 +55,14 @@
       }
       if (params.get("theme")) localStorage.setItem("sf.theme", params.get("theme"));
       const host = document.getElementById("frames");
+      const srcTemplate = params.get("src");
       host.innerHTML = sizesParam.split(",").map((key) => {
         const [width, label] = SIZES[key];
+        const src = srcTemplate
+          ? srcTemplate.replace("%W%", String(width))
+          : `/app/#/${route}`;
         return `<div class="frame"><header>${label}</header>
-          <iframe width="${width}" height="900" src="/app/#/${route}"></iframe></div>`;
+          <iframe width="${width}" height="900" src="${src}"></iframe></div>`;
       }).join("");
       document.querySelectorAll("iframe").forEach((frame) => {
         frame.addEventListener("load", () => {

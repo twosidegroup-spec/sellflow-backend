@@ -39,6 +39,7 @@ def list_payment_accounts(
             "business_id": account.business_id,
             "provider": account.provider,
             "receiving_number": account.receiving_number,
+            "account_type": account.account_type,
             "status": account.status,
             "mode": account.mode,
             "connected_at": account.connected_at.isoformat() if account.connected_at else None,
@@ -83,12 +84,14 @@ def connect_payment_account_route(
             business_id=business_id,
             provider=provider,
             receiving_number=receiving_number,
+            account_type=payload.account_type,
             status="configured",
             mode="live",
         )
         db.add(account)
     else:
         account.receiving_number = receiving_number
+        account.account_type = payload.account_type
         account.status = "configured"
     db.commit()
     db.refresh(account)
@@ -98,6 +101,7 @@ def connect_payment_account_route(
         "business_id": account.business_id,
         "provider": account.provider,
         "receiving_number": account.receiving_number,
+        "account_type": account.account_type,
         "status": account.status,
         "mode": account.mode,
     }

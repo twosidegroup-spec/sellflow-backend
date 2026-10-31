@@ -67,6 +67,9 @@ class PaymentAccount(Base):
     Migrated from System A's `payment_accounts` table. The account's receiving
     number is what the device bridge reports and what detection matches
     against; every row is owned by exactly one business.
+
+    `account_type` distinguishes a personal-wallet number from a merchant
+    account, which matters when interpreting what a notification can prove.
     """
 
     __tablename__ = "payment_accounts"
@@ -77,6 +80,7 @@ class PaymentAccount(Base):
     )
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     receiving_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    account_type: Mapped[str] = mapped_column(String(16), nullable=False, default="personal", server_default="personal")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="configured")
     mode: Mapped[str] = mapped_column(String(16), nullable=False, default="live")
     connected_at: Mapped[datetime] = mapped_column(

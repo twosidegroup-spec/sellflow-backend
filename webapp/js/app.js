@@ -12,7 +12,7 @@ import * as analytics from "./pages/analytics.js";
 import * as settings from "./pages/settings.js";
 
 const ROUTES = {
-  overview: { title: "Overview", subtitle: "Your business at a glance", render: overview.render, nav: "overview" },
+  overview: { title: "Home", subtitle: "Your business at a glance", render: overview.render, nav: "overview" },
   orders: { title: "Orders", subtitle: "Pipeline and fulfilment", render: orders.render, nav: "orders" },
   payments: { title: "Payments", subtitle: "Reconciliation and accounts", render: payments.render, nav: "payments" },
   products: { title: "Products", subtitle: "Catalogue, pricing and stock", render: products.render, nav: "products" },
@@ -23,18 +23,13 @@ const ROUTES = {
 
 const NAV_GROUPS = [
   {
-    label: "Operations",
+    label: "Workspace",
     items: [
-      ["overview", "Overview", "home"],
+      ["overview", "Home", "home"],
       ["orders", "Orders", "receipt"],
-      ["payments", "Payments", "wallet"],
-    ],
-  },
-  {
-    label: "Catalogue",
-    items: [
       ["products", "Products", "box"],
       ["customers", "Customers", "users"],
+      ["payments", "Payments", "wallet"],
     ],
   },
   {
@@ -50,8 +45,8 @@ const NAV_GROUPS = [
 const MOBILE_TABS = [
   ["overview", "Home", "home"],
   ["orders", "Orders", "receipt"],
-  ["payments", "Payments", "wallet"],
   ["products", "Products", "box"],
+  ["payments", "Payments", "wallet"],
   ["more", "More", "menu"],
 ];
 
@@ -395,6 +390,13 @@ async function boot() {
       /* ignore */
     }
   });
+
+  // PWA: register the shared service worker (static caching only; never /api).
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
 
   if (api.token) {
     try {

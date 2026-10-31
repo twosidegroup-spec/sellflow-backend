@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+﻿from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
@@ -14,10 +14,23 @@ router = APIRouter(prefix="/businesses/{business_id}/orders", tags=["Orders"])
 @router.get("/", response_model=list[OrderRead])
 def list_orders(
     business_id: int,
+    q: str | None = Query(None, max_length=120, description="Search by order id or customer name"),
+    order_status: OrderStatus | None = Query(None, alias="status"),
+    sort: str = Query("newest", pattern=r"^(newest|oldest|amount_desc|amount_asc)$"),
+    limit: int | None = Query(None, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_business: Business = Depends(get_current_business)
 ):
-    return service.get_orders(db, business_id)
+    return service.get_orders(
+        db,
+        business_id,
+        q=q,
+        status=order_status,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
 
 @router.post("/", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
 def create_order_endpoint(

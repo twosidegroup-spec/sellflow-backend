@@ -26,6 +26,8 @@ const SECTIONS = [
   ["business", "Business", "bank"],
   ["payments", "Payments", "wallet"],
   ["security", "Security", "shield"],
+  ["notifications", "Notifications", "bell"],
+  ["data", "Data", "download"],
   ["appearance", "Appearance", "sun"],
 ];
 
@@ -60,6 +62,8 @@ async function paintPanel(root, ctx) {
   if (section === "business") return renderBusiness(panel, ctx, user);
   if (section === "payments") return renderPayments(panel, ctx, user);
   if (section === "security") return renderSecurity(panel);
+  if (section === "notifications") return renderNotifications(panel);
+  if (section === "data") return renderData(panel, ctx);
   return renderAppearance(panel);
 }
 
@@ -204,8 +208,9 @@ async function renderPayments(panel, ctx, user) {
                 <span class="provider-logo">${providerLogo(account.provider)}</span>
                 <div class="grow">
                   <div style="font-weight:600; color:var(--ink)">${esc(providerLabel(account.provider))} · <span class="mono">${esc(account.receiving_number)}</span></div>
-                  <div class="small dim">Connected ${esc(fmt.date(account.connected_at))}</div>
+                  <div class="small dim">${(account.account_type || "personal") === "merchant" ? "Merchant account" : "Personal number"} · connected ${esc(fmt.date(account.connected_at))}</div>
                 </div>
+                <span class="badge badge--${(account.account_type || "personal") === "merchant" ? "info" : "slate"}">${(account.account_type || "personal") === "merchant" ? "Merchant" : "Personal"}</span>
                 <span class="badge badge--ok">${esc(account.status)}</span>
                 <button class="copy-btn js-copy" data-copy="${esc(account.receiving_number)}" aria-label="Copy number">${icon("copy", 14)}</button>
               </div>`
@@ -267,6 +272,12 @@ function renderSecurity(panel) {
         <span class="small dim">${icon("shield", 13)} Sessions stay signed in until the token expires.</span>
         <button class="btn btn--primary js-save-pass">${icon("key", 15)} Update password</button>
       </div>
+    </div>
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card__head"><div><h2>Account recovery</h2><div class="sub">What to do if you lose access</div></div></div>
+      <div class="card__body">
+        <div class="pill-note">${icon("info", 14)} Automated password reset by email is not available in this build — there is no mail delivery integration yet. Until then, recovery is handled manually by the SellFlow team, and your email address is the sign-in identifier.</div>
+      </div>
     </div>`;
 
   qs(".js-save-pass", panel).addEventListener("click", async (event) => {
@@ -293,6 +304,193 @@ function renderSecurity(panel) {
       setBusy(event.currentTarget, false);
     }
   });
+}
+
+/* ----------------------------------------------------------- notifications */
+
+function renderNotifications(panel) {
+  panel.innerHTML = `
+    <div class="card">
+      <div class="card__head"><div><h2>Notifications</h2><div class="sub">What the platform actually sends today</div></div></div>
+      <div class="card__body stack">
+        <div class="provider-row">
+          <span class="thumb">${icon("link", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Order events → signed webhooks</div>
+            <div class="small dim">When an order is created or its status changes, SellFlow delivers an HMAC-SHA256-signed POST to every active subscription of this business (configured through the webhooks API).</div>
+          </div>
+          <span class="badge badge--ok">Active</span>
+        </div>
+        <div class="provider-row">
+          <span class="thumb">${icon("alert", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Payment review queue</div>
+            <div class="small dim">Transactions without a confident order match appear under Payments → Needs review, and the Home dashboard shows the current count. Email or push alerts for them are not implemented.</div>
+          </div>
+          <span class="badge badge--slate">In-console only</span>
+        </div>
+        <div class="provider-row">
+          <span class="thumb">${icon("bell", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Customer email &amp; SMS updates</div>
+            <div class="small dim">Message delivery to your customers is not active in this build — the notification service only logs. No preference switch is shown because a switch would do nothing.</div>
+          </div>
+          <span class="badge badge--warn">Coming soon</span>
+        </div>
+      </div>
+      <div class="card__foot">
+        <span class="small dim">${icon("info", 13)} Preferences will appear here once a real delivery provider is integrated and tested.</span>
+      </div>
+    </div>`;
+}
+
+/* -------------------------------------------------------------------- data */
+
+async function renderData(panel, ctx) {
+  panel.innerHTML = `
+    <div class="card">
+      <div class="card__head"><div><h2>Export your data</h2><div class="sub">Generated in your browser from this business's records only</div></div></div>
+      <div class="card__body stack">
+        <div class="provider-row">
+          <span class="thumb">${icon("receipt", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Orders</div>
+            <div class="small dim">Every order with customer, status, payment state, COD flag and totals.</div>
+          </div>
+          <button class="btn btn--sm js-export-orders">${icon("download", 14)} CSV</button>
+        </div>
+        <div class="provider-row">
+          <span class="thumb">${icon("wallet", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Recorded payments</div>
+            <div class="small dim">Payments recorded against orders, with method and reference.</div>
+          </div>
+          <button class="btn btn--sm js-export-payments">${icon("download", 14)} CSV</button>
+        </div>
+        <div class="provider-row">
+          <span class="thumb">${icon("users", 15)}</span>
+          <div class="grow">
+            <div style="font-weight:600; color:var(--ink)">Customers</div>
+            <div class="small dim">Directory with contact details and purchase summaries from real orders.</div>
+          </div>
+          <button class="btn btn--sm js-export-customers">${icon("download", 14)} CSV</button>
+        </div>
+      </div>
+      <div class="card__foot">
+        <span class="small dim">${icon("shield", 13)} Exports contain your business data — store them accordingly. Nothing is uploaded anywhere.</span>
+      </div>
+    </div>`;
+
+  const stamp = () => new Date().toISOString().slice(0, 10);
+
+  qs(".js-export-orders", panel).addEventListener("click", async (event) => {
+    setBusy(event.currentTarget, true, "Preparing…");
+    try {
+      const orders = await api.orders(ctx.businessId);
+      downloadCsv(`sellflow-orders-${stamp()}.csv`, [
+        ["order_id", "placed_at", "customer", "customer_phone", "items", "status", "payment_status", "cod", "delivery_fee_bdt", "discount_bdt", "total_bdt"],
+        ...orders.map((order) => [
+          order.id,
+          order.created_at,
+          order.customer?.name || "Walk-in",
+          order.customer?.phone || "",
+          (order.items || []).reduce((sum, item) => sum + item.quantity, 0),
+          order.status,
+          order.payment_status,
+          order.is_cod ? "yes" : "no",
+          Number(order.delivery_fee).toFixed(2),
+          Number(order.discount).toFixed(2),
+          Number(order.total_amount).toFixed(2),
+        ]),
+      ]);
+      toast(`Exported ${orders.length} order${orders.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast(error.message || "Could not build the export", { type: "error" });
+    } finally {
+      setBusy(event.currentTarget, false);
+    }
+  });
+
+  qs(".js-export-payments", panel).addEventListener("click", async (event) => {
+    setBusy(event.currentTarget, true, "Preparing…");
+    try {
+      const payments = await api.payments(ctx.businessId);
+      downloadCsv(`sellflow-payments-${stamp()}.csv`, [
+        ["payment_id", "order_id", "paid_at", "method", "amount_bdt", "transaction_reference", "status"],
+        ...payments.map((payment) => [
+          payment.id,
+          payment.order_id,
+          payment.paid_at || payment.created_at,
+          payment.method,
+          Number(payment.amount).toFixed(2),
+          payment.transaction_id || "",
+          payment.status,
+        ]),
+      ]);
+      toast(`Exported ${payments.length} payment${payments.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast(error.message || "Could not build the export", { type: "error" });
+    } finally {
+      setBusy(event.currentTarget, false);
+    }
+  });
+
+  qs(".js-export-customers", panel).addEventListener("click", async (event) => {
+    setBusy(event.currentTarget, true, "Preparing…");
+    try {
+      const [customers, orders] = await Promise.all([
+        api.customers(ctx.businessId),
+        api.orders(ctx.businessId),
+      ]);
+      const totals = new Map();
+      for (const order of orders) {
+        if (!order.customer_id || order.status === "cancelled") continue;
+        const entry = totals.get(order.customer_id) || { count: 0, spent: 0 };
+        entry.count += 1;
+        entry.spent += Number(order.total_amount || 0);
+        totals.set(order.customer_id, entry);
+      }
+      downloadCsv(`sellflow-customers-${stamp()}.csv`, [
+        ["customer_id", "name", "phone", "email", "address", "added_at", "orders_placed", "total_purchased_bdt"],
+        ...customers.map((customer) => {
+          const stat = totals.get(customer.id) || { count: 0, spent: 0 };
+          return [
+            customer.id,
+            customer.name,
+            customer.phone || "",
+            customer.email || "",
+            customer.address || "",
+            customer.created_at,
+            stat.count,
+            stat.spent.toFixed(2),
+          ];
+        }),
+      ]);
+      toast(`Exported ${customers.length} customer${customers.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast(error.message || "Could not build the export", { type: "error" });
+    } finally {
+      setBusy(event.currentTarget, false);
+    }
+  });
+}
+
+function downloadCsv(filename, rows) {
+  const escapeCell = (value) => {
+    const text = value == null ? "" : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  // The BOM keeps Excel reading the file as UTF-8.
+  const csv = "\uFEFF" + rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 /* -------------------------------------------------------------- appearance */

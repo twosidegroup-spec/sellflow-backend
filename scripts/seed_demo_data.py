@@ -74,6 +74,7 @@ def main() -> int:
         WebhookSubscription,
     )
     from app.db.engine import SessionLocal
+    from app.deliveries.models import DeliveryStatus
     from app.orders.models import OrderStatus
     from app.orders.schemas import OrderCreate, OrderItemCreate
     from app.orders import service as order_service
@@ -87,6 +88,7 @@ def main() -> int:
     from app.payments.intelligence.models import PaymentEventCreate, PaymentSourceType
     from app.payments.intelligence.service import PAYMENT_INTELLIGENCE_SERVICE
     from app.payments.models import PaymentStatus
+    from app.products.models import ProductStatus
     from app.products.schemas import ProductCreate
     from app.products import service as product_service
 
@@ -131,14 +133,25 @@ def main() -> int:
     business_id = business.id
     print(f"Business #{business_id} '{business.name}' / user {user.email}")
 
-    db.add(
-        PaymentAccount(
-            business_id=business_id,
-            provider="bkash",
-            receiving_number="8801730000000",
-            status="configured",
-            mode="live",
-        )
+    db.add_all(
+        [
+            PaymentAccount(
+                business_id=business_id,
+                provider="bkash",
+                receiving_number="8801730000000",
+                account_type="personal",
+                status="configured",
+                mode="live",
+            ),
+            PaymentAccount(
+                business_id=business_id,
+                provider="nagad",
+                receiving_number="8801830000000",
+                account_type="merchant",
+                status="configured",
+                mode="live",
+            ),
+        ]
     )
     db.commit()
 
@@ -168,7 +181,21 @@ def main() -> int:
                 ),
             )
         )
-    print(f"{len(products)} products")
+    # One archived product so the console's Archived filter has real content.
+    archived_product = product_service.create_product(
+        db,
+        business_id,
+        ProductCreate(
+            name="Winter Shawl — Charcoal",
+            sku="SHL-CHAR-09",
+            cost_price=Decimal("520.00"),
+            selling_price=Decimal("980.00"),
+            stock_quantity=0,
+        ),
+    )
+    archived_product.status = ProductStatus.INACTIVE
+    db.commit()
+    print(f"{len(products)} products (+1 archived)")
 
     # --------------------------------------------------------------- customers
     customer_rows = [
@@ -199,6 +226,8 @@ def main() -> int:
         days_ago,
         delivery_fee="80.00",
         discount="0.00",
+        is_cod=False,
+        notes=None,
     ):
         order = order_service.create_order(
             db,
@@ -216,6 +245,8 @@ def main() -> int:
                 ],
                 delivery_fee=Decimal(delivery_fee),
                 discount=Decimal(discount),
+                is_cod=is_cod,
+                notes=notes,
             ),
         )
         when = now - timedelta(days=days_ago, hours=2)
@@ -250,7 +281,50 @@ def main() -> int:
         product = products[index % len(products)]
         customer = customers[index % len(customers)]
         quantity = 1 if index % 4 else 2
-        orders.append(make_order(customer, product, quantity, status, days_ago))
+        is_cod = index % 3 == 0 and status in (
+            OrderStatus.CREATED,
+            OrderStatus.CONFIRMED,
+            OrderStatus.SHIPPED,
+        )
+        notes = "Call before delivery" if index % 5 == 0 else None
+        orders.append(
+            make_order(
+                customer,
+                product,
+                quantity,
+                status,
+                days_ago,
+                is_cod=is_cod,
+                notes=notes,
+            )
+        )
+    cod_count = sum(1 for order in orders if order.is_cod)
+
+    # Deliveries (courier + tracking) for every shipped or delivered order.
+    couriers = [("Pathao", "PTH"), ("Steadfast", "STF"), ("RedX", "RDX")]
+    shipped_count = 0
+    for order in orders:
+        if order.status not in (OrderStatus.SHIPPED, OrderStatus.DELIVERED):
+            continue
+        courier, prefix = couriers[order.id % len(couriers)]
+        shipped_at = order.created_at + timedelta(hours=6)
+        delivery = Delivery(
+            business_id=business_id,
+            order_id=order.id,
+            courier=courier,
+            tracking_number=f"{prefix}-{1000 + order.id}",
+            delivery_fee=order.delivery_fee,
+            status=DeliveryStatus.DELIVERED
+            if order.status == OrderStatus.DELIVERED
+            else DeliveryStatus.IN_TRANSIT,
+            shipped_at=shipped_at,
+            delivered_at=shipped_at + timedelta(days=1)
+            if order.status == OrderStatus.DELIVERED
+            else None,
+        )
+        db.add(delivery)
+        shipped_count += 1
+    db.commit()
 
     # Two dedicated customers with exactly ONE order each, so the seeded
     # partial-payment and overpayment scenarios match unambiguously.
@@ -272,10 +346,12 @@ def main() -> int:
     )
     customers.extend([partial_demo_customer, over_demo_customer])
     orders.extend([partial_demo_order, over_demo_order])
-    print(f"{len(orders)} orders (incl. 2 scenario orders)")
+    print(f"{len(orders)} orders ({cod_count} COD, {shipped_count} with courier/tracking, incl. 2 scenario orders)")
 
     # -------------------------------------------------- recorded payments rows
-    paid_orders = [o for o in orders if o.status == OrderStatus.DELIVERED][:3]
+    paid_orders = [
+        o for o in orders if o.status == OrderStatus.DELIVERED and not o.is_cod
+    ][:3]
     for order in paid_orders:
         db.add(
             Payment(

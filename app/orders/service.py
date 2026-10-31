@@ -1,7 +1,11 @@
 ﻿from decimal import Decimal
 from sqlalchemy.orm import Session
-from app.db.base import Order, OrderItem, Product
+from sqlalchemy import or_
+from app.db.base import Order, OrderItem, Product, Customer
+from app.orders.models import OrderStatus, Order as _OrderModel  # noqa: F401
 from app.orders.schemas import OrderCreate
+from app.products.models import ProductStatus
+
 
 def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Order:
     # 1. Initialize totals
@@ -15,6 +19,7 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
         delivery_fee=order_data.delivery_fee,
         discount=order_data.discount,
         notes=order_data.notes,
+        is_cod=bool(order_data.is_cod),
         total_amount=0.0, # Will be updated
         total_cost=0.0,   # Will be updated
         gross_profit=0.0  # Will be updated
@@ -32,6 +37,10 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
             ).first()
             if not product:
                 raise ValueError(f"Product {item_data.product_id} not found in this business")
+            if product.status != ProductStatus.ACTIVE:
+                raise ValueError(
+                    f"Product {item_data.product_id} is archived and cannot be ordered"
+                )
             
             # Use product's current cost if not explicitly provided, otherwise use provided
             unit_cost = item_data.unit_cost if item_data.unit_cost is not None else product.cost_price
@@ -73,8 +82,48 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
     db.refresh(db_order)
     return db_order
 
-def get_orders(db: Session, business_id: int) -> list[Order]:
-    return db.query(Order).filter(Order.business_id == business_id).order_by(Order.created_at.desc()).all()
+def get_orders(
+    db: Session,
+    business_id: int,
+    *,
+    q: str | None = None,
+    status: OrderStatus | None = None,
+    sort: str = "newest",
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[Order]:
+    """List orders for one business with optional search/filter/sort/page.
+
+    Defaults (no arguments) keep the original behaviour: every order, newest
+    first — so existing clients and tests are unaffected.
+    """
+    query = db.query(Order).filter(Order.business_id == business_id)
+
+    if status is not None:
+        query = query.filter(Order.status == status)
+
+    if q and q.strip():
+        term = q.strip()
+        conditions = [Order.customer.has(Customer.name.ilike(f"%{term}%"))]
+        if term.isdigit():
+            conditions.append(Order.id == int(term))
+        query = query.filter(or_(*conditions))
+
+    if sort == "oldest":
+        query = query.order_by(Order.created_at.asc(), Order.id.asc())
+    elif sort == "amount_desc":
+        query = query.order_by(Order.total_amount.desc(), Order.id.desc())
+    elif sort == "amount_asc":
+        query = query.order_by(Order.total_amount.asc(), Order.id.asc())
+    else:
+        query = query.order_by(Order.created_at.desc(), Order.id.desc())
+
+    if offset:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+
+    return query.all()
 
 def get_order(db: Session, business_id: int, order_id: int) -> Order | None:
     return db.query(Order).filter(Order.id == order_id, Order.business_id == business_id).first()
