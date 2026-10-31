@@ -5,14 +5,19 @@ from alembic import context
 
 from app.core.config import settings
 from app.db.base import Base  # This imports all models automatically
+from app.db.engine import normalize_database_url
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Overwrite sqlalchemy.url with our Pydantic settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Overwrite sqlalchemy.url with our Pydantic settings. Managed providers hand
+# out plain `postgresql://` URLs; normalise them to the project's psycopg (v3)
+# driver exactly as the runtime engine does (see app/db/engine.py).
+config.set_main_option(
+    "sqlalchemy.url", normalize_database_url(settings.database_url)
+)
 
 target_metadata = Base.metadata
 
