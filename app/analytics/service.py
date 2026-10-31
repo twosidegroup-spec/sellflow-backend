@@ -11,7 +11,9 @@ def get_dashboard_summary(db: Session, business_id: int, days: int = 7) -> Dashb
     """Dashboard summary for one business.
 
     `days` controls the length of the daily series (default 7, the original
-    behaviour). Lifetime totals are unaffected.
+    behaviour). Lifetime totals are unaffected. Cancelled orders are excluded
+    from every money figure (lifetime totals, the daily series and the "today"
+    numbers) while remaining visible in `orders_by_status`.
     """
     # 1. Calculate Total Revenue and Total Profit from Orders.
     # Cancelled orders are excluded: counting them as revenue overstates the
@@ -59,6 +61,7 @@ def get_dashboard_summary(db: Session, business_id: int, days: int = 7) -> Dashb
         Order.created_at, Order.total_amount, Order.gross_profit
     ).filter(
         Order.business_id == business_id,
+        Order.status != OrderStatus.CANCELLED,  # same rule as the lifetime totals
         Order.created_at >= window_start.astimezone(timezone.utc),
     ).all()
 

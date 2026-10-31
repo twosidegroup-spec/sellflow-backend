@@ -109,7 +109,7 @@ function renderStatus(root, summary) {
 
 function renderHealth(root, intelligence) {
   const segments = [
-    { label: "Verified", value: Number(intelligence.paid_events || 0), color: "#0E988C" },
+    { label: "Matched", value: Number(intelligence.paid_events || 0), color: "#0E988C" },
     { label: "In review", value: Number(intelligence.review_events || 0), color: "#D99B1E" },
     { label: "Partial", value: Number(intelligence.partial_events || 0), color: "#2563EB" },
     { label: "Duplicate", value: Number(intelligence.duplicate_events || 0), color: "#8A98AE" },

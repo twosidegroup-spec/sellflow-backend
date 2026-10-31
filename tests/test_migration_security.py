@@ -202,6 +202,17 @@ def test_production_accepts_real_secrets():
     assert created.is_production is True
 
 
+def test_production_rejects_debug_mode():
+    """APP_DEBUG=true in production echoes SQL (business data) into logs."""
+    with pytest.raises(ValidationError):
+        Settings(
+            app_env="production",
+            app_debug=True,
+            secret_key="a-real-secret-value-of-sufficient-length-1234567890",
+            device_token_secret="another-real-secret-value-1234567890abcdef",
+        )
+
+
 def test_wildcard_cors_disables_credentials():
     wildcard = Settings(cors_origins="*")
     assert "*" in wildcard.cors_origin_list

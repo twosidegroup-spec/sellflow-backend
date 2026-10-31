@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import re
+import secrets
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
 from app.core.config import settings
@@ -75,7 +76,13 @@ def create_product_endpoint(
             raise HTTPException(status_code=400, detail="File is too large")
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"{business_id}_{timestamp}_{_safe_upload_name(file.filename)}"
+        # 128 bits of randomness: the file is served from an unauthenticated
+        # /uploads mount (capability-URL model), so the name must not be
+        # guessable from business id + timestamp + original filename.
+        filename = (
+            f"{business_id}_{timestamp}_{secrets.token_hex(16)}_"
+            f"{_safe_upload_name(file.filename)}"
+        )
         filepath = os.path.join(UPLOAD_DIR, filename)
         
         with open(filepath, "wb") as buffer:

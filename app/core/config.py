@@ -133,6 +133,13 @@ class Settings(BaseSettings):
                 'Generate one with: python -c "import secrets; print(secrets.'
                 'token_urlsafe(48))"'
             )
+
+        if self.app_debug:
+            raise ValueError(
+                f"APP_DEBUG must be false while APP_ENV={self.app_env!r}: debug "
+                "mode echoes SQL statements (including business data) into logs "
+                "and exposes verbose traces. Production refuses to start."
+            )
         return self
 
 

@@ -73,7 +73,15 @@ def create_order(db: Session, business_id: int, order_data: OrderCreate) -> Orde
     # 4. Calculate final order totals
     gross_profit = (total_amount - total_cost) - order_data.discount
     final_amount = total_amount + order_data.delivery_fee - order_data.discount
-    
+
+    # A discount may never push the amount due below zero. The previous
+    # behaviour accepted arbitrarily large discounts and stored negative
+    # totals (reducing reported revenue and corrupting profit figures).
+    if final_amount < 0:
+        raise ValueError(
+            "Discount cannot exceed the item subtotal plus the delivery fee"
+        )
+
     db_order.total_amount = float(final_amount)
     db_order.total_cost = float(total_cost)
     db_order.gross_profit = float(gross_profit)

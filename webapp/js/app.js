@@ -278,6 +278,13 @@ async function refreshReviewBadge() {
 
 function signOut() {
   api.clearSession();
+  // Drop any per-tab hand-off state (may contain customer names) so a
+  // different account signing in on the same tab never sees it.
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* private mode */
+  }
   shellMounted = false;
   toast("Signed out", { type: "info" });
   window.location.hash = "#/login";

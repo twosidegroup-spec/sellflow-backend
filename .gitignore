@@ -45,3 +45,8 @@ htmlcov/
 
 .vercel
 .env*
+
+# Environment files (never commit real values; .env.example is the template)
+.env.*
+!.env.example
+

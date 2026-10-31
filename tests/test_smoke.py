@@ -52,36 +52,30 @@ def test_models():
         return False
 
 def test_routes():
-    """Test routes are registered"""
-    print("\n[ROUTE] Testing route registration")
-    
-    routes = [
+    """Routes are registered (checked against the OpenAPI schema + live app)."""
+    expected = [
         "/api/v1/auth/register",
         "/api/v1/auth/login",
-        "/api/v1/businesses/{business_id}/products",
-        "/api/v1/businesses/{business_id}/orders",
+        "/api/v1/businesses/{business_id}/products/",
+        "/api/v1/businesses/{business_id}/orders/",
         "/api/v1/businesses/{business_id}/payments",
-        "/api/v1/businesses/{business_id}/webhooks",
+        "/api/v1/businesses/{business_id}/webhooks/",
         "/api/v1/businesses/{business_id}/analytics/summary",
+        "/device-bridge/dashboard",
+        "/payment-accounts",
     ]
-    
-    app_routes = [str(route.path) for route in app.routes]
-    
-    passed = 0
-    failed = 0
-    
-    for route in routes:
-        # Check if base path exists
-        base = route.split("{")[0].rstrip("/")
-        if any(base in r for r in app_routes):
-            print(f"  [PASS] {base}")
-            passed += 1
-        else:
-            print(f"  [FAIL] {route}")
-            failed += 1
-    
-    print(f"\n{passed}/{len(routes)} routes registered")
-    return failed == 0
+    registered = app.openapi()["paths"]
+    for route in expected:
+        assert route in registered, route
+
+    # The live app answers (401/405/200), never 404, for these paths.
+    for method, path in (
+        ("GET", "/api/v1/businesses/1/products/"),
+        ("GET", "/api/v1/businesses/1/orders/"),
+        ("GET", "/payment-accounts"),
+    ):
+        response = client.request(method, path)
+        assert response.status_code != 404, (method, path)
 
 def test_migrations():
     """Test migrations are in place"""

@@ -223,8 +223,10 @@ export function paymentStateBadge(paymentStatus) {
 }
 
 export function recordedPaymentBadge(status) {
+  // These are payments a seller recorded by hand (or through the purchase
+  // flow). "Recorded" is the honest label: nothing here is provider-attested.
   const map = {
-    verified: ["Verified", "ok"],
+    verified: ["Recorded", "ok"],
     pending: ["Pending", "warn"],
     failed: ["Failed", "danger"],
     refunded: ["Refunded", "info"],

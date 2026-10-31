@@ -14,7 +14,7 @@ Consolidated after the System A -> System B migration:
   Every other route stays under `/api/v1`.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +27,23 @@ app = FastAPI(
     description="Seller Execution Engine for social commerce.",
     version="0.9.0",
 )
+
+
+@app.middleware("http")
+async def _api_no_store(request: Request, call_next):
+    """API responses must never sit in a browser or intermediary HTTP cache.
+
+    Seller data is per-business and the browser HTTP cache keys on URL, not on
+    the Authorization header. Without an explicit directive a heuristically
+    cacheable response could be replayed to a *different* account on the same
+    device. The service worker already refuses to cache /api/*; this closes
+    the same gap at the HTTP-cache layer.
+    """
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 # CORS from configuration. `*` is only possible when credentials are disabled.
 app.add_middleware(
@@ -86,10 +103,14 @@ app.include_router(payments_detect_router, prefix="/api/v1")
 app.include_router(payment_intelligence_router, prefix="/api/v1")
 app.include_router(deliveries_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
+# The v1 info router defines literal `/businesses/me` and `/businesses/me/switch`
+# paths. It must be registered BEFORE the businesses router, whose
+# `/businesses/{business_id}` pattern would otherwise shadow `me` (yielding a
+# 422 int-parse error instead of the business context).
+app.include_router(v1_router)
 app.include_router(businesses_router, prefix="/api/v1")
 app.include_router(devices_router, prefix="/api/v1")
 app.include_router(health_router)
-app.include_router(v1_router)
 app.include_router(webhooks_router, prefix="/api/v1")
 
 # Root-mounted device bridge / payment accounts (Kotlin bridge compatibility).
