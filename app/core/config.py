@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     aws_region: str = ""
     aws_s3_endpoint: str = ""
 
+    # Object storage for product images. "local" keeps the historical
+    # disk-backed behaviour; "r2" targets Cloudflare R2 (S3-compatible API)
+    # for durable storage on serverless hosts. See app/core/storage.py.
+    storage_backend: str = "local"
+    # Public base URL that R2 objects are served from (bucket domain or a
+    # custom domain), e.g. https://cdn.example.com — required for "r2".
+    storage_public_base_url: str = ""
+
     # ==================== FILE UPLOAD ====================
     max_upload_size: int = 10 * 1024 * 1024
     allowed_upload_types: str = "image/jpeg,image/png,image/jpg"
@@ -104,42 +112,67 @@ class Settings(BaseSettings):
     # ==================== VALIDATION ====================
     @model_validator(mode="after")
     def _fail_closed_in_production(self) -> "Settings":
-        if not self.is_production:
-            return self
+        if self.is_production:
+            secret = (self.secret_key or "").strip()
+            if (
+                not secret
+                or len(secret) < _MIN_SECRET_LENGTH
+                or secret.casefold() in _PLACEHOLDER_SECRETS
+            ):
+                raise ValueError(
+                    "SECRET_KEY is missing, too short, or a known placeholder while "
+                    f"APP_ENV={self.app_env!r}. Production requires a unique key of at "
+                    'least 32 characters. Generate one with: python -c "import secrets; '
+                    'print(secrets.token_hex(32))"'
+                )
 
-        secret = (self.secret_key or "").strip()
-        if (
-            not secret
-            or len(secret) < _MIN_SECRET_LENGTH
-            or secret.casefold() in _PLACEHOLDER_SECRETS
-        ):
-            raise ValueError(
-                "SECRET_KEY is missing, too short, or a known placeholder while "
-                f"APP_ENV={self.app_env!r}. Production requires a unique key of at "
-                'least 32 characters. Generate one with: python -c "import secrets; '
-                'print(secrets.token_hex(32))"'
-            )
+            device_secret = (self.device_token_secret or "").strip()
+            if (
+                not device_secret
+                or len(device_secret) < _MIN_SECRET_LENGTH
+                or device_secret.casefold() in _PLACEHOLDER_SECRETS
+            ):
+                raise ValueError(
+                    "DEVICE_TOKEN_SECRET is missing or unusable while "
+                    f"APP_ENV={self.app_env!r}. It protects device pairing codes and "
+                    "device tokens, so production refuses to start without it. "
+                    'Generate one with: python -c "import secrets; print(secrets.'
+                    'token_urlsafe(48))"'
+                )
 
-        device_secret = (self.device_token_secret or "").strip()
-        if (
-            not device_secret
-            or len(device_secret) < _MIN_SECRET_LENGTH
-            or device_secret.casefold() in _PLACEHOLDER_SECRETS
-        ):
-            raise ValueError(
-                "DEVICE_TOKEN_SECRET is missing or unusable while "
-                f"APP_ENV={self.app_env!r}. It protects device pairing codes and "
-                "device tokens, so production refuses to start without it. "
-                'Generate one with: python -c "import secrets; print(secrets.'
-                'token_urlsafe(48))"'
-            )
+            if self.app_debug:
+                raise ValueError(
+                    f"APP_DEBUG must be false while APP_ENV={self.app_env!r}: debug "
+                    "mode echoes SQL statements (including business data) into logs "
+                    "and exposes verbose traces. Production refuses to start."
+                )
 
-        if self.app_debug:
+        # Object-storage selection is validated in every environment: choosing
+        # R2 without complete configuration must fail fast, never silently fall
+        # back to the ephemeral local disk.
+        backend = (self.storage_backend or "local").strip().lower()
+        if backend not in {"local", "r2"}:
             raise ValueError(
-                f"APP_DEBUG must be false while APP_ENV={self.app_env!r}: debug "
-                "mode echoes SQL statements (including business data) into logs "
-                "and exposes verbose traces. Production refuses to start."
+                f"STORAGE_BACKEND={self.storage_backend!r} is not supported "
+                "(expected 'local' or 'r2')"
             )
+        if backend == "r2":
+            missing = [
+                name
+                for name, value in (
+                    ("AWS_ACCESS_KEY_ID", self.aws_access_key_id),
+                    ("AWS_SECRET_ACCESS_KEY", self.aws_secret_access_key),
+                    ("AWS_S3_BUCKET", self.aws_s3_bucket),
+                    ("AWS_S3_ENDPOINT", self.aws_s3_endpoint),
+                    ("STORAGE_PUBLIC_BASE_URL", self.storage_public_base_url),
+                )
+                if not (value or "").strip()
+            ]
+            if missing:
+                raise ValueError(
+                    "STORAGE_BACKEND=r2 requires these variables: "
+                    + ", ".join(missing)
+                )
         return self
 
 

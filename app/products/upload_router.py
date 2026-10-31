@@ -1,28 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from datetime import datetime
+import logging
 import os
 import re
 import secrets
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
 from app.core.config import settings
+from app.core.storage import UPLOAD_DIR, StorageError, get_storage  # noqa: F401 (UPLOAD_DIR re-exported for tests)
 from app.db.base import Business
 from app.products.schemas import ProductCreate, ProductRead, ProductUpdate
 from app.products import service
 
 router = APIRouter(prefix="/businesses/{business_id}/products", tags=["Products"])
+logger = logging.getLogger("sellflow.products.upload")
 
-# Canonical upload directory: <backend>/uploads (contains .gitkeep, gitignored).
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads"
-)
-try:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-except OSError:
-    # Serverless platforms (e.g. Vercel) have a read-only bundle filesystem.
-    # Uploads then fail at request time with a clear 500; the app still boots.
-    pass
+# UPLOAD_DIR is imported from app.core.storage (re-exported above for tests and
+# tooling); the storage backend owns directory creation and write failures.
 
 
 def _safe_upload_name(original: str | None) -> str:
@@ -95,12 +90,19 @@ def create_product_endpoint(
             f"{business_id}_{timestamp}_{secrets.token_hex(16)}_"
             f"{_safe_upload_name(file.filename)}{extension}"
         )
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        
-        with open(filepath, "wb") as buffer:
-            buffer.write(content)
-        
-        image_url = f"/uploads/{filename}"
+
+        # Persist through the configured backend (local disk or Cloudflare R2).
+        # A storage failure must not create a product with a dangling image URL.
+        try:
+            image_url = get_storage().save(
+                filename, content, (file.content_type or "").lower()
+            )
+        except StorageError as exc:
+            logger.warning("product image storage failed: %s", type(exc).__name__)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Image storage is temporarily unavailable",
+            ) from exc
     
     try:
         product = service.create_product(

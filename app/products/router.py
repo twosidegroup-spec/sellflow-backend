@@ -3,10 +3,13 @@ from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.businesses.dependencies import get_current_business
 from app.db.base import Business
+from app.core.storage import StorageError, get_storage
 from app.products.schemas import ProductCreate, ProductRead, ProductUpdate
 from app.products import service
+import logging
 
 router = APIRouter(prefix="/businesses/{business_id}/products", tags=["Products"])
+logger = logging.getLogger("sellflow.products")
 
 @router.get("/", response_model=list[ProductRead])
 def list_products(business_id: int, db: Session = Depends(get_db), current_business: Business = Depends(get_current_business)):
@@ -33,5 +36,21 @@ def update_product_endpoint(business_id: int, product_id: int, product_data: Pro
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product_endpoint(business_id: int, product_id: int, db: Session = Depends(get_db), current_business: Business = Depends(get_current_business)):
+    product = service.get_product(db, business_id, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    image_urls = [image.image_url for image in product.images]
+
     if not service.delete_product(db, business_id, product_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    # Best-effort object cleanup: a storage hiccup must never fail the delete
+    # (the database row is already gone). Unknown/foreign URLs are ignored.
+    for url in image_urls:
+        try:
+            get_storage().delete_url(url)
+        except StorageError:
+            logger.warning("product image cleanup failed", exc_info=True)
+        except Exception:  # noqa: BLE001 - cleanup is advisory only
+            logger.warning("unexpected product image cleanup error", exc_info=True)
