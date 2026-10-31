@@ -47,20 +47,21 @@ def test_background_task_triggered_on_status_change(mock_send_notification):
     '''Proves that updating order status queues a background task without blocking the response.'''
     business_id, order_id, token = _setup_order_test()
     
-    # Update status to SHIPPED
+    # Update status to CONFIRMED (an allowed transition from CREATED; the
+    # approved matrix rejects created -> shipped with 409).
     response = client.patch(
         f"/api/v1/businesses/{business_id}/orders/{order_id}/status",
-        json={"status": "shipped"},
+        json={"status": "confirmed"},
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 200
-    assert response.json()["status"] == "shipped"
+    assert response.json()["status"] == "confirmed"
     
     # Verify the background task was queued with correct arguments
     mock_send_notification.assert_called_once_with(
         order_id=order_id,
-        status="shipped",
+        status="confirmed",
         customer_email="customer@example.com"
     )
 

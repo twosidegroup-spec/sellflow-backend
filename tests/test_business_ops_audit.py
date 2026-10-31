@@ -347,31 +347,76 @@ def test_delivery_status_is_validated(client):
     assert duplicate.status_code == 400  # one delivery per order
 
 
-def test_order_status_transitions_are_currently_unrestricted(client):
-    """Documents current behaviour (any status -> any status).
+def test_order_status_transition_matrix_enforced(client):
+    """The approved matrix (STAGING_READINESS.md 4.1) with 409 on violations.
 
-    There is no transition matrix: a delivered order can be set back to
-    `created`. Sellers occasionally need to correct mistakes, so this is a
-    product decision; it is pinned here so an accidental change is visible and
-    so the audit report can flag it as a pending product decision.
+    created -> confirmed | cancelled
+    confirmed -> packed | shipped | cancelled
+    packed -> shipped | cancelled
+    shipped -> delivered | cancelled
+    delivered, cancelled -> terminal
+    Same-status requests are 200 no-ops.
     """
     seller = register_seller(client)
-    order = create_order(client, seller)
 
-    for status in ("delivered", "created", "cancelled"):
-        response = client.patch(
-            _api(seller, f"/orders/{order['id']}/status"),
+    def patch(order_id: int, status: str):
+        return client.patch(
+            _api(seller, f"/orders/{order_id}/status"),
             json={"status": status},
             headers=seller["auth"],
         )
-        assert response.status_code == 200, response.text
-        assert response.json()["status"] == status
 
-    invalid = client.patch(
-        _api(seller, f"/orders/{order['id']}/status"),
-        json={"status": "shipped_out"},
-        headers=seller["auth"],
-    )
+    # The happy path walks the whole flow (with the packed step skipped once,
+    # which the matrix allows via confirmed -> shipped).
+    order = create_order(client, seller)
+    assert patch(order["id"], "confirmed").status_code == 200
+    assert patch(order["id"], "shipped").status_code == 200  # skip packed
+    assert patch(order["id"], "delivered").status_code == 200
+
+    # Terminal: nothing leaves delivered, not even cancellation.
+    denied = patch(order["id"], "cancelled")
+    assert denied.status_code == 409
+    body = denied.json()["detail"]
+    assert body["current_status"] == "delivered"
+    assert body["requested_status"] == "cancelled"
+    assert body["allowed_transitions"] == []
+    # The attempted transition did not change anything.
+    assert client.get(_api(seller, f"/orders/{order['id']}"), headers=seller["auth"]).json()["status"] == "delivered"
+
+    # Every disallowed edge from the matrix is a 409 with the allowed set.
+    matrix_denials = [
+        ("created", "shipped"), ("created", "packed"), ("created", "delivered"),
+        ("confirmed", "delivered"), ("packed", "confirmed"),
+        ("shipped", "created"), ("cancelled", "created"), ("cancelled", "confirmed"),
+    ]
+    for current, target in matrix_denials:
+        fresh = create_order(client, seller)
+        # Move into `current` through allowed steps.
+        walk = {
+            "created": [],
+            "confirmed": ["confirmed"],
+            "packed": ["confirmed", "packed"],
+            "shipped": ["confirmed", "shipped"],
+            "cancelled": ["cancelled"],
+        }[current]
+        for step in walk:
+            assert patch(fresh["id"], step).status_code == 200, (current, step)
+        response = patch(fresh["id"], target)
+        assert response.status_code == 409, (current, target, response.status_code)
+        assert response.json()["detail"]["current_status"] == current
+        assert target not in response.json()["detail"]["allowed_transitions"]
+
+    # Same-status requests are no-ops (200) and do not error.
+    noop = create_order(client, seller)
+    assert patch(noop["id"], "created").status_code == 200
+
+    # The full happy path including packed also works.
+    full = create_order(client, seller)
+    for step in ("confirmed", "packed", "shipped", "delivered"):
+        assert patch(full["id"], step).status_code == 200, step
+
+    # Unknown enum values remain 422 (schema validation precedes the matrix).
+    invalid = patch(noop["id"], "shipped_out")
     assert invalid.status_code == 422
 
 

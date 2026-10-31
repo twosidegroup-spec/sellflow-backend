@@ -24,6 +24,11 @@ function extractDetail(payload) {
       })
       .join("; ");
   }
+  // Structured detail objects (e.g. the 409 order-transition payload) carry a
+  // human-readable message plus machine-readable fields.
+  if (detail && typeof detail === "object" && typeof detail.message === "string") {
+    return detail.message;
+  }
   return "";
 }
 

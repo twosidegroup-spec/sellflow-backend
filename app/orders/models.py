@@ -12,6 +12,33 @@ class OrderStatus(str, enum.Enum):
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
 
+
+# Order-status transition policy (approved 2026-10-31, documented in
+# STAGING_READINESS.md section 4.1). Same-status requests are no-ops handled
+# by the caller and are not listed here. Terminal states allow nothing.
+#
+#   created   -> confirmed | cancelled
+#   confirmed -> packed | shipped | cancelled   (packed is optional)
+#   packed    -> shipped | cancelled
+#   shipped   -> delivered | cancelled
+#   delivered -> terminal (returns/refunds need a dedicated workflow)
+#   cancelled -> terminal
+ALLOWED_ORDER_TRANSITIONS: dict["OrderStatus", frozenset["OrderStatus"]] = {
+    OrderStatus.CREATED: frozenset({OrderStatus.CONFIRMED, OrderStatus.CANCELLED}),
+    OrderStatus.CONFIRMED: frozenset(
+        {OrderStatus.PACKED, OrderStatus.SHIPPED, OrderStatus.CANCELLED}
+    ),
+    OrderStatus.PACKED: frozenset({OrderStatus.SHIPPED, OrderStatus.CANCELLED}),
+    OrderStatus.SHIPPED: frozenset({OrderStatus.DELIVERED, OrderStatus.CANCELLED}),
+    OrderStatus.DELIVERED: frozenset(),
+    OrderStatus.CANCELLED: frozenset(),
+}
+
+
+def allowed_next_statuses(status: "OrderStatus") -> frozenset["OrderStatus"]:
+    """The set of statuses `status` may move to (same-status no-op excluded)."""
+    return ALLOWED_ORDER_TRANSITIONS.get(status, frozenset())
+
 class Order(Base):
     __tablename__ = "orders"
 

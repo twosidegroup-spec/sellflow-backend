@@ -267,11 +267,28 @@ function paintPager(root, ctx) {
 
 /* ------------------------------------------------------------- row menu -- */
 
+/* Order-status transition policy (mirrors app/orders/models.py;
+   STAGING_READINESS.md 4.1). Same-status requests are no-ops and are not
+   offered. Terminal states allow nothing. */
+const ALLOWED_TRANSITIONS = {
+  created: ["confirmed", "cancelled"],
+  confirmed: ["packed", "shipped", "cancelled"],
+  packed: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
+};
+
+function allowedNextStatuses(current) {
+  return ALLOWED_TRANSITIONS[current] || [];
+}
+
 function openRowMenu(anchor, root, ctx, orderId) {
   qs(".row-menu-popover")?.remove();
   const order = state.orders.find((item) => item.id === orderId);
   if (!order) return;
   const rect = anchor.getBoundingClientRect();
+  const nextStatuses = allowedNextStatuses(order.status);
   const wrap = document.createElement("div");
   wrap.className = "row-menu-popover";
   wrap.style.position = "fixed";
@@ -282,10 +299,14 @@ function openRowMenu(anchor, root, ctx, orderId) {
     <div class="menu" style="position:static; animation:none">
       <button class="menu__item" data-action="detail">${icon("eye", 15)} View details</button>
       <button class="menu__item" data-action="pay" ${order.payment_status === "paid" ? "disabled style='opacity:.5'" : ""}>${icon("wallet", 15)} Record payment</button>
-      <div class="menu__sep"></div>
-      ${STATUS_ORDER.filter((status) => status !== order.status)
-        .map((status) => `<button class="menu__item" data-status="${status}">${icon("arrowDownRight", 15)} Mark ${STATUS_LABEL[status]}</button>`)
-        .join("")}
+      ${
+        nextStatuses.length
+          ? `<div class="menu__sep"></div>
+             ${nextStatuses
+               .map((status) => `<button class="menu__item" data-status="${status}">${icon("arrowDownRight", 15)} Mark ${STATUS_LABEL[status]}</button>`)
+               .join("")}`
+          : ""
+      }
     </div>`;
   document.body.appendChild(wrap);
 
