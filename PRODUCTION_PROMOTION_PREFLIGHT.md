@@ -43,6 +43,10 @@ none of them is a defect in the release itself.
   build step in `vercel.json`) — they only run when executed explicitly against a database.
 - **Dependency delta:** fastapi 0.162.0, psycopg[binary] 3.2.3, python-jose[cryptography] 3.5.0,
   python-multipart 0.0.32, boto3 1.43.123, jinja2 — already exercised by 161 passing tests.
+- *Note:* the inventory above is pinned to baseline `58cba9e`. Any pre-flight/report commits made
+  on this branch (including the commit that introduces this document) also ride along with the
+  promotion and are **documentation-only** — they change no application code, migrations,
+  dependencies or deployment configuration.
 - **No application replacement:** `app/main.py` and core modules are `M` (evolved), not delete+add
   of a different product; the six deletions above are old deployment/ops files only.
 
