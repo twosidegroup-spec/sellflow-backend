@@ -7,3 +7,9 @@ __pycache__/
 .coverage
 .DS_Store
 Thumbs.db
+
+# Environment files (never commit real values; .env.example is the template)
+.env
+.env.*
+!.env.example
+
